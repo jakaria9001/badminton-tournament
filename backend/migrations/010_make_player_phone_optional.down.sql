@@ -1,0 +1,2 @@
+ALTER TABLE players
+ALTER COLUMN phone SET NOT NULL;

@@ -1,0 +1,13 @@
+CREATE TABLE users (
+    id UUID PRIMARY KEY,
+
+    name VARCHAR(100) NOT NULL,
+
+    email VARCHAR(255) NOT NULL UNIQUE,
+
+    password_hash TEXT NOT NULL,
+
+    role VARCHAR(30) NOT NULL DEFAULT 'ADMIN',
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
