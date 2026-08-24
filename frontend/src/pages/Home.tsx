@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { getEvent } from "../api/eventApi";
-import { getAdminToken } from "../api/authApi";
 import type { EventInfo } from "../types/event";
+import PublicFooter from "../components/PublicFooter";
+import PublicHeader from "../components/PublicHeader";
 
 const EVENT_ID =
   "00000000-0000-0000-0000-000000000002";
@@ -37,40 +38,38 @@ function Home() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-950 text-white">
-        Loading tournament...
+      <div className="min-h-screen bg-slate-950 text-white">
+        <PublicHeader />
+        <main className="flex min-h-[70vh] items-center justify-center px-5 text-center sm:px-8">
+          Loading tournament...
+        </main>
+        <PublicFooter />
       </div>
     );
   }
 
   if (error || !event) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4 text-center text-white">
-        <div>
-          <p className="text-xl font-semibold">
-            Unable to load tournament
-          </p>
+      <div className="min-h-screen bg-slate-950 text-white">
+        <PublicHeader />
+        <main className="flex min-h-[70vh] items-center justify-center px-4 text-center">
+          <div>
+            <p className="text-xl font-semibold">
+              Unable to load tournament
+            </p>
 
-          <p className="mt-2 text-slate-400">
-            {error}
-          </p>
-        </div>
+            <p className="mt-2 text-slate-400">
+              {error}
+            </p>
+          </div>
+        </main>
+        <PublicFooter />
       </div>
     );
   }
 
   const isOpen =
     event.status === "REGISTRATION_OPEN";
-
-  const hasAdminToken = Boolean(getAdminToken());
-
-  const adminDestination = hasAdminToken
-    ? "/admin/registrations"
-    : "/admin/login";
-
-  const adminLabel = hasAdminToken
-    ? "Dashboard"
-    : "Login";
 
   const capacityText =
     event.maxTeams !== null
@@ -89,28 +88,7 @@ function Home() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
-      <header className="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4 sm:px-8">
-          <a href="/" className="flex items-center gap-3" aria-label="ShuttleHub home">
-            <img
-              src="/shuttlehub_logo.svg"
-              alt="ShuttleHub logo"
-              className="h-10 w-auto rounded-lg border border-slate-200 bg-white px-2 py-1 dark:border-slate-300 dark:bg-slate-100"
-            />
-            <div>
-              <div className="text-lg font-bold tracking-tight text-white">ShuttleHub</div>
-              <div className="text-[10px] uppercase tracking-[0.22em] text-slate-400">Men's Doubles</div>
-            </div>
-          </a>
-
-          <nav className="hidden items-center gap-6 text-sm text-slate-300 md:flex">
-            <a href="/" className="transition hover:text-white">Home</a>
-            <a href="/teams" className="transition hover:text-white">Teams</a>
-            <a href="/register" className="transition hover:text-white">Register</a>
-            <a href={adminDestination} className="transition hover:text-white">{adminLabel}</a>
-          </nav>
-        </div>
-      </header>
+      <PublicHeader />
 
       <section className="px-5 pb-16 pt-10 sm:px-8">
         <div className="mx-auto max-w-6xl">
@@ -277,11 +255,7 @@ function Home() {
         </div>
       </section>
 
-      <footer className="border-t border-white/10 px-5 py-8">
-        <div className="mx-auto max-w-5xl text-center text-sm text-slate-500">
-          Elite Shuttler Club &copy; 2026. All rights reserved.
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   );
 }

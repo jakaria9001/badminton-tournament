@@ -5,6 +5,8 @@ import type { Team } from "../api/teamApi";
 
 import { getEvent } from "../api/eventApi";
 import type { EventInfo } from "../types/event";
+import PublicFooter from "../components/PublicFooter";
+import PublicHeader from "../components/PublicHeader";
 
 const EVENT_ID =
   "00000000-0000-0000-0000-000000000002";
@@ -40,15 +42,12 @@ function Teams() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-slate-950 px-4 py-10 text-white">
+    <div className="flex min-h-screen flex-col bg-slate-950 text-white">
+      <PublicHeader />
+      <main className="flex-1 px-4 py-8">
       <div className="mx-auto max-w-4xl">
         <div className="mb-8 rounded-[28px] border border-slate-800 bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 p-8 shadow-2xl shadow-slate-950/40">
           <div className="flex flex-col items-center text-center">
-            <a href="/" className="flex items-center gap-3 rounded-full border border-slate-700 bg-slate-900/80 px-3 py-2" aria-label="ShuttleHub home">
-              <img src="/shuttlehub_logo.svg" alt="ShuttleHub logo" className="h-10 w-auto rounded-lg border border-slate-200 bg-white px-2 py-1 dark:border-slate-300 dark:bg-slate-100" />
-              <span className="text-lg font-bold tracking-tight text-white">ShuttleHub</span>
-            </a>
-
             <h1 className="mt-4 text-3xl font-black tracking-tight sm:text-4xl">
               Confirmed Teams
             </h1>
@@ -131,6 +130,8 @@ function Teams() {
           </>
         )}
       </div>
+      </main>
+      <PublicFooter />
     </div>
   );
 }
