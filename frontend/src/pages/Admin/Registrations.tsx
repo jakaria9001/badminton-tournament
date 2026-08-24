@@ -184,6 +184,17 @@ function Registrations() {
                 <div className="mb-8 rounded-2xl bg-slate-900 p-6 text-white shadow-lg">
                     <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
                         <div>
+                            <a
+                                href="/"
+                                aria-label="ShuttleHub home"
+                                className="mb-4 inline-flex rounded-lg bg-white px-2 py-1 transition hover:bg-slate-100"
+                            >
+                                <img
+                                    src="/shuttlehub_logo.svg"
+                                    alt="ShuttleHub"
+                                    className="h-9 w-auto"
+                                />
+                            </a>
                             <p className="text-sm uppercase tracking-[0.18em] text-slate-300">
                                 Admin
                             </p>

@@ -45,7 +45,7 @@ function Teams() {
         <div className="mb-8 rounded-[28px] border border-slate-800 bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 p-8 shadow-2xl shadow-slate-950/40">
           <div className="flex flex-col items-center text-center">
             <a href="/" className="flex items-center gap-3 rounded-full border border-slate-700 bg-slate-900/80 px-3 py-2" aria-label="ShuttleHub home">
-              <img src="/shuttlehub_logo.svg" alt="ShuttleHub logo" className="h-10 w-auto" />
+              <img src="/shuttlehub_logo.svg" alt="ShuttleHub logo" className="h-10 w-auto rounded-lg border border-slate-200 bg-white px-2 py-1 dark:border-slate-300 dark:bg-slate-100" />
               <span className="text-lg font-bold tracking-tight text-white">ShuttleHub</span>
             </a>
 

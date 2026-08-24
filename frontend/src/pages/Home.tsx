@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getEvent } from "../api/eventApi";
+import { getAdminToken } from "../api/authApi";
 import type { EventInfo } from "../types/event";
 
 const EVENT_ID =
@@ -61,6 +62,16 @@ function Home() {
   const isOpen =
     event.status === "REGISTRATION_OPEN";
 
+  const hasAdminToken = Boolean(getAdminToken());
+
+  const adminDestination = hasAdminToken
+    ? "/admin/registrations"
+    : "/admin/login";
+
+  const adminLabel = hasAdminToken
+    ? "Dashboard"
+    : "Login";
+
   const capacityText =
     event.maxTeams !== null
       ? `${event.registeredTeams} / ${event.maxTeams}`
@@ -84,7 +95,7 @@ function Home() {
             <img
               src="/shuttlehub_logo.svg"
               alt="ShuttleHub logo"
-              className="h-10 w-auto"
+              className="h-10 w-auto rounded-lg border border-slate-200 bg-white px-2 py-1 dark:border-slate-300 dark:bg-slate-100"
             />
             <div>
               <div className="text-lg font-bold tracking-tight text-white">ShuttleHub</div>
@@ -96,6 +107,7 @@ function Home() {
             <a href="/" className="transition hover:text-white">Home</a>
             <a href="/teams" className="transition hover:text-white">Teams</a>
             <a href="/register" className="transition hover:text-white">Register</a>
+            <a href={adminDestination} className="transition hover:text-white">{adminLabel}</a>
           </nav>
         </div>
       </header>
