@@ -135,6 +135,10 @@ DATABASE_URL=postgres://postgres:password@localhost:5432/badminton_tournament?ss
 PORT=8080
 JWT_SECRET=replace-with-a-long-random-secret
 CORS_ALLOWED_ORIGINS=http://localhost:5173
+LOGIN_RATE_LIMIT_MAX_REQUESTS=5
+LOGIN_RATE_LIMIT_WINDOW_SECONDS=60
+REGISTRATION_RATE_LIMIT_MAX_REQUESTS=10
+REGISTRATION_RATE_LIMIT_WINDOW_SECONDS=60
 ```
 
 Apply migrations from the backend directory:
@@ -171,6 +175,18 @@ The current development account email created by this command is:
 ```text
 admin@badminton.local
 ```
+
+## Rate Limiting
+
+Login and public registration requests are limited independently by client IP.
+By default, each IP can make 5 login requests and 10 registration requests per
+60-second window. Requests beyond the limit receive HTTP `429` and a
+`Retry-After` response header.
+
+These defaults are intended for a single backend instance. For multiple backend
+instances, use a shared store such as Redis so all instances enforce the same
+limits. The limiter uses the connection IP and does not trust client-supplied
+forwarding headers by default.
 
 Change this behavior before production if administrator email management is required.
 

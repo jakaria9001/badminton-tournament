@@ -3,7 +3,9 @@ package router
 import (
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
@@ -24,6 +26,14 @@ func NewRouter(
 	}
 
 	r := chi.NewRouter()
+	loginLimiter := middleware.NewRateLimiter(
+		envInt("LOGIN_RATE_LIMIT_MAX_REQUESTS", 5),
+		envDurationSeconds("LOGIN_RATE_LIMIT_WINDOW_SECONDS", 60),
+	)
+	registrationLimiter := middleware.NewRateLimiter(
+		envInt("REGISTRATION_RATE_LIMIT_MAX_REQUESTS", 10),
+		envDurationSeconds("REGISTRATION_RATE_LIMIT_WINDOW_SECONDS", 60),
+	)
 
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins: allowedOrigins,
@@ -66,7 +76,7 @@ func NewRouter(
 				eventHandler.GetByID,
 			)
 
-			r.Post(
+			r.With(registrationLimiter.Middleware).Post(
 				"/registrations",
 				registrationHandler.Create,
 			)
@@ -77,7 +87,7 @@ func NewRouter(
 			)
 		})
 
-		r.Post(
+		r.With(loginLimiter.Middleware).Post(
 			"/auth/login",
 			authHandler.Login,
 		)
@@ -109,4 +119,16 @@ func NewRouter(
 	})
 
 	return r
+}
+
+func envInt(name string, fallback int) int {
+	value, err := strconv.Atoi(os.Getenv(name))
+	if err != nil || value < 1 {
+		return fallback
+	}
+	return value
+}
+
+func envDurationSeconds(name string, fallback int) time.Duration {
+	return time.Duration(envInt(name, fallback)) * time.Second
 }
