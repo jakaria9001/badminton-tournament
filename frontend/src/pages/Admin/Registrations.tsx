@@ -6,6 +6,8 @@ import {
     logout,
     type AdminProfile,
 } from "../../api/authApi";
+import PublicFooter from "../../components/PublicFooter";
+import PublicHeader from "../../components/PublicHeader";
 
 const EVENT_ID =
   "00000000-0000-0000-0000-000000000002";
@@ -172,29 +174,24 @@ function Registrations() {
 
     if (loading) {
         return (
-        <div className="p-10">
-            Loading registrations...
+        <div className="flex min-h-screen flex-col bg-slate-100">
+            <PublicHeader />
+            <main className="flex flex-1 items-center justify-center p-10 text-slate-700">
+                Loading registrations...
+            </main>
+            <PublicFooter />
         </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-slate-100 px-4 py-8">
+        <div className="flex min-h-screen flex-col bg-slate-100">
+            <PublicHeader />
+            <main className="flex-1 px-4 py-8">
             <div className="mx-auto max-w-5xl">
                 <div className="mb-8 rounded-2xl bg-slate-900 p-6 text-white shadow-lg">
                     <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
                         <div>
-                            <a
-                                href="/"
-                                aria-label="ShuttleHub home"
-                                className="mb-4 inline-flex rounded-lg bg-white px-2 py-1 transition hover:bg-slate-100"
-                            >
-                                <img
-                                    src="/shuttlehub_logo.svg"
-                                    alt="ShuttleHub"
-                                    className="h-9 w-auto"
-                                />
-                            </a>
                             <p className="text-sm uppercase tracking-[0.18em] text-slate-300">
                                 Admin
                             </p>
@@ -337,6 +334,8 @@ function Registrations() {
                     </div>
                 )}
             </div>
+            </main>
+            <PublicFooter />
         </div>
     );
 }
