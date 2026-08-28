@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/jakaria9001/badminton-tournament/backend/internal/draw"
@@ -37,6 +38,10 @@ func NewDrawService(
 	}
 }
 
+func shouldGenerateDraw(round *model.TournamentRound) bool {
+	return round != nil && round.Status == model.RoundOpen
+}
+
 func (s *DrawService) Generate(
 	ctx context.Context,
 	roundID uuid.UUID,
@@ -50,23 +55,6 @@ func (s *DrawService) Generate(
 
 	defer tx.Rollback(ctx)
 
-	count, err :=
-		s.matchRepository.CountByRoundTx(
-			ctx,
-			tx,
-			roundID,
-		)
-
-	if err != nil {
-		return err
-	}
-
-	if count > 0 {
-		return fmt.Errorf(
-			"draw has already been generated",
-		)
-	}
-
 	round, err :=
 		s.roundRepository.GetByIDTx(
 			ctx,
@@ -78,10 +66,26 @@ func (s *DrawService) Generate(
 		return err
 	}
 
-	if round.Status != model.RoundOpen {
+	if !shouldGenerateDraw(round) {
 		return fmt.Errorf(
 			"round must be OPEN",
 		)
+	}
+
+	if err := s.matchRepository.DeleteByRoundTx(
+		ctx,
+		tx,
+		roundID,
+	); err != nil {
+		return err
+	}
+
+	if err := s.advancementRepository.DeleteByRoundTx(
+		ctx,
+		tx,
+		roundID,
+	); err != nil {
+		return err
 	}
 
 	teams, err :=
@@ -104,6 +108,7 @@ func (s *DrawService) Generate(
 	if len(teams) == 3 {
 		err := s.generateSpecialSemiFinal(
 			ctx,
+			tx,
 			round,
 			teams,
 		)
@@ -127,8 +132,9 @@ func (s *DrawService) Generate(
 		)
 
 	if bye != nil {
-		err := s.advancementRepository.CreateBye(
+		err := s.advancementRepository.CreateByeTx(
 			ctx,
+			tx,
 			uuid.MustParse(round.ID),
 			uuid.MustParse(bye.ID),
 		)
@@ -138,8 +144,9 @@ func (s *DrawService) Generate(
 		}
 	}
 
-	if err := s.persistPairings(
+	if err := s.persistPairingsTx(
 		ctx,
+		tx,
 		round,
 		pairings,
 	); err != nil {
@@ -158,6 +165,7 @@ func (s *DrawService) Generate(
 
 func (s *DrawService) generateSpecialSemiFinal(
 	ctx context.Context,
+	tx pgx.Tx,
 	round *model.TournamentRound,
 	teams []model.TeamSummary,
 ) error {
@@ -166,16 +174,18 @@ func (s *DrawService) generateSpecialSemiFinal(
 		return err
 	}
 
-	if err := s.advancementRepository.CreateBye(
+	if err := s.advancementRepository.CreateByeTx(
 		ctx,
+		tx,
 		uuid.MustParse(round.ID),
 		uuid.MustParse(result.WaitingTeam.ID),
 	); err != nil {
 		return err
 	}
 
-	return s.persistPairings(
+	return s.persistPairingsTx(
 		ctx,
+		tx,
 		round,
 		[]draw.PairingResult{{
 			Team1: result.SF1Team1,
@@ -184,21 +194,25 @@ func (s *DrawService) generateSpecialSemiFinal(
 	)
 }
 
-func (s *DrawService) persistPairings(
+func (s *DrawService) persistPairingsTx(
 	ctx context.Context,
+	tx pgx.Tx,
 	round *model.TournamentRound,
 	pairings []draw.PairingResult,
 ) error {
 
 	for i, pairing := range pairings {
+		team1ID := uuid.MustParse(pairing.Team1.ID)
+		team2ID := uuid.MustParse(pairing.Team2.ID)
 
 		_, err :=
-			s.matchRepository.CreateMatch(
+			s.matchRepository.CreateMatchTx(
 				ctx,
+				tx,
 				uuid.MustParse(round.ID),
 				i+1,
-				uuid.MustParse(pairing.Team1.ID),
-				uuid.MustParse(pairing.Team2.ID),
+				&team1ID,
+				&team2ID,
 				model.MatchNormal,
 			)
 

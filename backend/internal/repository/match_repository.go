@@ -673,6 +673,31 @@ func (r *MatchRepository) CountByRoundTx(
 	return count, err
 }
 
+func (r *MatchRepository) DeleteByRoundTx(
+	ctx context.Context,
+	tx pgx.Tx,
+	roundID uuid.UUID,
+) error {
+
+	_, err := tx.Exec(
+		ctx,
+		`
+		DELETE FROM matches
+		WHERE round_id = $1
+		`,
+		roundID,
+	)
+
+	if err != nil {
+		return fmt.Errorf(
+			"delete matches by round: %w",
+			err,
+		)
+	}
+
+	return nil
+}
+
 func (r *MatchRepository) CompleteMatchTx(
 	ctx context.Context,
 	tx pgx.Tx,
