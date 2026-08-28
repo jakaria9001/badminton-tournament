@@ -59,7 +59,7 @@ func (r *MatchRepository) CompleteRoundIfFinishedTx(
 		UPDATE tournament_rounds
 		SET status = 'COMPLETED', completed_at = NOW()
 		WHERE id = $1
-		  AND status = 'OPEN'
+		  AND status IN ('OPEN', 'LOCKED')
 		  AND EXISTS (
 				SELECT 1 FROM matches
 				WHERE round_id = $1

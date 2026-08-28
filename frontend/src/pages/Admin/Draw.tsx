@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getAdminToken, logout } from "../../api/authApi";
+import ResultDialog from "../../components/ResultDialog";
 import PublicFooter from "../../components/PublicFooter";
 import PublicHeader from "../../components/PublicHeader";
 
@@ -25,9 +26,11 @@ interface Team {
 interface Match {
   id: string;
   roundId: string;
+  round: string;
   team1: Team | null;
   team2: Team | null;
   status: string;
+  winnerTeamId: string | null;
 }
 
 function Draw() {
@@ -40,6 +43,14 @@ function Draw() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState("");
+  const [activeMatch, setActiveMatch] = useState<Match | null>(null);
+
+  const finalMatch = Object.values(matches)
+    .flat()
+    .find((match) => match.round === "FINAL" && match.status === "COMPLETED");
+  const champion = finalMatch && finalMatch.winnerTeamId
+    ? [finalMatch.team1, finalMatch.team2].find((team) => team?.id === finalMatch.winnerTeamId) ?? null
+    : null;
 
   const request = useCallback(async (url: string, options: RequestInit = {}) => {
     const response = await fetch(`${API_BASE_URL}${url}`, {
@@ -193,7 +204,34 @@ function Draw() {
             </div>
           </div>
 
-          {message && <p className="mb-4 rounded-lg bg-white p-4 text-sm font-medium text-slate-700 shadow-sm">{message}</p>}
+          {message && (
+            <div className="mb-4 flex items-start justify-between gap-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm font-medium text-amber-900 shadow-sm" role="alert">
+              <p>{message}</p>
+              <button
+                aria-label="Dismiss warning"
+                className="shrink-0 rounded-md p-1 text-lg leading-none text-amber-700 transition hover:bg-amber-100 hover:text-amber-950"
+                onClick={() => setMessage("")}
+                type="button"
+              >
+                &times;
+              </button>
+            </div>
+          )}
+
+          {champion && (
+            <section className="mb-6 overflow-hidden rounded-2xl bg-amber-400 shadow-lg">
+              <div className="flex flex-col gap-5 px-6 py-7 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+                <div>
+                  <p className="text-sm font-bold uppercase tracking-[0.2em] text-amber-950">Tournament champions</p>
+                  <h2 className="mt-2 text-3xl font-black text-slate-950">{champion.player1} &amp; {champion.player2}</h2>
+                  <p className="mt-2 font-semibold text-amber-950">{champion.teamName || "Championship pair"}</p>
+                </div>
+                <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full border-4 border-amber-950/20 bg-white/70 text-4xl shadow-inner" aria-hidden="true">
+                  ★
+                </div>
+              </div>
+            </section>
+          )}
 
           <div className="mb-6 flex flex-wrap items-end justify-end gap-3">
             <label className="flex flex-col gap-1 text-sm font-semibold text-slate-700">
@@ -235,7 +273,14 @@ function Draw() {
                     {round.pairingMethod === "RANDOM" && (
                       <button className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50" disabled={busy !== null} onClick={() => void generate(round)} type="button">Generate draw</button>
                     )}
-                    <button className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50" disabled={busy !== null} onClick={() => void lock(round)} type="button">Lock round</button>
+                    <button
+                      className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                      disabled={busy !== null || (roundMatches.length ?? 0) === 0}
+                      onClick={() => void lock(round)}
+                      type="button"
+                    >
+                      Lock round
+                    </button>
                   </div>
                 )}
 
@@ -262,7 +307,19 @@ function Draw() {
                           <span className="font-semibold text-slate-800">
                             Match {index + 1}: {match.team1?.player1 ?? "TBD"} / {match.team1?.player2 ?? "TBD"} vs {match.team2?.player1 ?? "TBD"} / {match.team2?.player2 ?? "TBD"}
                           </span>
-                          <span className="text-xs font-bold text-slate-500">{match.status}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-slate-500">{match.status}</span>
+                            {(match.status === "SCHEDULED" || match.status === "IN_PROGRESS") && (
+                              <button
+                                className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                                disabled={busy !== null}
+                                onClick={() => setActiveMatch(match)}
+                                type="button"
+                              >
+                                Submit result
+                              </button>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -275,6 +332,18 @@ function Draw() {
         </div>
       </main>
       <PublicFooter />
+      {activeMatch && (
+        <ResultDialog
+          match={activeMatch}
+          onClose={() => setActiveMatch(null)}
+          onSubmitted={async () => {
+            setActiveMatch(null);
+            await loadRounds();
+            setMessage("Result submitted.");
+          }}
+          request={request}
+        />
+      )}
     </div>
   );
 }
