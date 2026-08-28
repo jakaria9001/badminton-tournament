@@ -22,11 +22,21 @@ interface Team {
   player2: string;
 }
 
+interface Match {
+  id: string;
+  roundId: string;
+  team1: Team | null;
+  team2: Team | null;
+  status: string;
+}
+
 function Draw() {
   const navigate = useNavigate();
   const [rounds, setRounds] = useState<Round[]>([]);
   const [teams, setTeams] = useState<Record<string, Team[]>>({});
+  const [matches, setMatches] = useState<Record<string, Match[]>>({});
   const [selectedTeams, setSelectedTeams] = useState<Record<string, string>>({});
+  const [newRoundPairingMethod, setNewRoundPairingMethod] = useState("RANDOM");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState("");
@@ -59,6 +69,14 @@ function Draw() {
     const data = await response.json();
     setRounds(data ?? []);
 
+    const matchesResponse = await request(`/api/v1/events/${EVENT_ID}/matches`);
+    const matchData: Match[] = (await matchesResponse.json()) ?? [];
+    const matchesByRound = matchData.reduce<Record<string, Match[]>>((grouped, match) => {
+      grouped[match.roundId] = [...(grouped[match.roundId] ?? []), match];
+      return grouped;
+    }, {});
+    setMatches(matchesByRound);
+
     const available = await Promise.all((data ?? []).map(async (round: Round) => {
       const teamResponse = await request(
         `/api/v1/admin/events/${EVENT_ID}/rounds/${round.id}/available-teams`,
@@ -85,7 +103,7 @@ function Draw() {
         body: JSON.stringify({
           roundNumber: rounds.length + 1,
           roundName: `ROUND_${rounds.length + 1}`,
-          pairingMethod: "RANDOM",
+          pairingMethod: newRoundPairingMethod,
         }),
       });
       await loadRounds();
@@ -177,14 +195,31 @@ function Draw() {
 
           {message && <p className="mb-4 rounded-lg bg-white p-4 text-sm font-medium text-slate-700 shadow-sm">{message}</p>}
 
-          <div className="mb-6 flex justify-end">
+          <div className="mb-6 flex flex-wrap items-end justify-end gap-3">
+            <label className="flex flex-col gap-1 text-sm font-semibold text-slate-700">
+              Pairing method
+              <select
+                className="rounded-lg border border-slate-300 bg-white px-3 py-2 font-normal"
+                value={newRoundPairingMethod}
+                onChange={(event) => setNewRoundPairingMethod(event.target.value)}
+              >
+                <option value="RANDOM">Random</option>
+                <option value="MANUAL">Manual</option>
+              </select>
+            </label>
             <button className="rounded-lg bg-emerald-600 px-4 py-2 font-semibold text-white disabled:opacity-50" disabled={busy !== null} onClick={() => void createRound()} type="button">Create round</button>
           </div>
 
           <div className="space-y-4">
             {rounds.length === 0 && <div className="rounded-2xl bg-white p-8 text-center text-slate-500 shadow-sm">No rounds created yet.</div>}
             {rounds.map((round) => {
-              const availableTeams = teams[round.id] ?? [];
+                const roundMatches = matches[round.id] ?? [];
+                const usedTeamIds = new Set(
+                  roundMatches.flatMap((match) => [match.team1?.id, match.team2?.id]).filter(Boolean),
+                );
+                const availableTeams = (teams[round.id] ?? []).filter((team, index, allTeams) => (
+                  !usedTeamIds.has(team.id) && allTeams.findIndex((candidate) => candidate.id === team.id) === index
+                ));
               return (
                 <section className="rounded-2xl bg-white p-6 shadow-sm" key={round.id}>
                 <div className="flex flex-wrap items-center justify-between gap-3">
@@ -197,12 +232,15 @@ function Draw() {
 
                 {round.status === "OPEN" && (
                   <div className="mt-5 flex flex-wrap gap-3">
-                    <button className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50" disabled={busy !== null} onClick={() => void generate(round)} type="button">Generate draw</button>
+                    {round.pairingMethod === "RANDOM" && (
+                      <button className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50" disabled={busy !== null} onClick={() => void generate(round)} type="button">Generate draw</button>
+                    )}
                     <button className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50" disabled={busy !== null} onClick={() => void lock(round)} type="button">Lock round</button>
                   </div>
                 )}
 
-                <div className="mt-5 grid gap-3 md:grid-cols-[1fr_1fr_auto]">
+                {round.status === "OPEN" && round.pairingMethod === "MANUAL" && (
+                  <div className="mt-5 grid gap-3 md:grid-cols-[1fr_1fr_auto]">
                   <select className="rounded-lg border border-slate-300 bg-white px-3 py-2" value={selectedTeams[`${round.id}:team1`] ?? ""} onChange={(event) => setSelectedTeams({ ...selectedTeams, [`${round.id}:team1`]: event.target.value })}>
                     <option value="">Team 1</option>
                     {availableTeams.map((team) => <option key={`one-${team.id}`} value={team.id}>{team.player1} / {team.player2}</option>)}
@@ -212,7 +250,24 @@ function Draw() {
                     {availableTeams.map((team) => <option key={`two-${team.id}`} value={team.id}>{team.player1} / {team.player2}</option>)}
                   </select>
                   <button className="rounded-lg bg-amber-500 px-4 py-2 font-semibold text-white disabled:opacity-50" disabled={busy !== null || round.status !== "OPEN"} onClick={() => void createMatch(round)} type="button">Add match</button>
-                </div>
+                  </div>
+                )}
+
+                {roundMatches.length > 0 && (
+                  <div className="mt-5 border-t border-slate-200 pt-5">
+                    <h3 className="text-sm font-bold uppercase tracking-wide text-slate-500">Matches</h3>
+                    <div className="mt-3 space-y-2">
+                      {roundMatches.map((match, index) => (
+                        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-50 px-4 py-3 text-sm" key={match.id}>
+                          <span className="font-semibold text-slate-800">
+                            Match {index + 1}: {match.team1?.player1 ?? "TBD"} / {match.team1?.player2 ?? "TBD"} vs {match.team2?.player1 ?? "TBD"} / {match.team2?.player2 ?? "TBD"}
+                          </span>
+                          <span className="text-xs font-bold text-slate-500">{match.status}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 </section>
               );
             })}

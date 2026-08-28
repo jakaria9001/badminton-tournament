@@ -180,9 +180,6 @@ function Registration() {
           <div>
             <h2 className="text-lg font-semibold text-white">
               Player 2
-              <span className="ml-2 text-sm font-normal text-slate-400">
-                (phone optional)
-              </span>
             </h2>
 
             <div className="mt-3 space-y-3">

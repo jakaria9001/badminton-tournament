@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/jakaria9001/badminton-tournament/backend/internal/draw"
 	"github.com/jakaria9001/badminton-tournament/backend/internal/model"
@@ -12,6 +13,7 @@ import (
 )
 
 type DrawService struct {
+	db                    *pgxpool.Pool
 	roundRepository       *repository.RoundRepository
 	matchRepository       *repository.MatchRepository
 	advancementRepository *repository.AdvancementRepository
@@ -19,6 +21,7 @@ type DrawService struct {
 }
 
 func NewDrawService(
+	db *pgxpool.Pool,
 	roundRepository *repository.RoundRepository,
 	matchRepository *repository.MatchRepository,
 	advancementRepository *repository.AdvancementRepository,
@@ -26,6 +29,7 @@ func NewDrawService(
 ) *DrawService {
 
 	return &DrawService{
+		db:                    db,
 		roundRepository:       roundRepository,
 		matchRepository:       matchRepository,
 		advancementRepository: advancementRepository,
@@ -38,9 +42,18 @@ func (s *DrawService) Generate(
 	roundID uuid.UUID,
 ) error {
 
+	tx, err := s.db.Begin(ctx)
+
+	if err != nil {
+		return err
+	}
+
+	defer tx.Rollback(ctx)
+
 	count, err :=
-		s.matchRepository.CountByRound(
+		s.matchRepository.CountByRoundTx(
 			ctx,
+			tx,
 			roundID,
 		)
 
@@ -55,8 +68,9 @@ func (s *DrawService) Generate(
 	}
 
 	round, err :=
-		s.roundRepository.GetByID(
+		s.roundRepository.GetByIDTx(
 			ctx,
+			tx,
 			roundID,
 		)
 
@@ -88,11 +102,16 @@ func (s *DrawService) Generate(
 
 	// Special three-team stage.
 	if len(teams) == 3 {
-		return s.generateSpecialSemiFinal(
+		err := s.generateSpecialSemiFinal(
 			ctx,
 			round,
 			teams,
 		)
+		if err != nil {
+			return err
+		}
+
+		return tx.Commit(ctx)
 	}
 
 	if round.PairingMethod != model.PairingRandom {
@@ -119,13 +138,22 @@ func (s *DrawService) Generate(
 		}
 	}
 
-	_ = bye
-
-	return s.persistPairings(
+	if err := s.persistPairings(
 		ctx,
 		round,
 		pairings,
-	)
+	); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf(
+			"commit draw: %w",
+			err,
+		)
+	}
+
+	return nil
 }
 
 func (s *DrawService) generateSpecialSemiFinal(

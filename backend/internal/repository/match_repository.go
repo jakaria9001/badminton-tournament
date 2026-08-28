@@ -32,6 +32,7 @@ func (r *MatchRepository) GetMatchesByEvent(
 		SELECT
 			m.id,
 			m.event_id,
+			m.round_id,
 			m.round,
 			m.match_number,
 			m.match_type,
@@ -48,7 +49,12 @@ func (r *MatchRepository) GetMatchesByEvent(
 			m.status,
 			m.winner_team_id,
 			m.loser_team_id,
-			m.next_match_id
+			m.winner_next_match_id,
+			m.loser_next_match_id,
+			m.team1_source_match_id,
+			m.team1_source_type,
+			m.team2_source_match_id,
+			m.team2_source_type
 		FROM matches m
 
 		LEFT JOIN teams t1
@@ -120,6 +126,7 @@ func (r *MatchRepository) GetMatchesByEvent(
 		err := rows.Scan(
 			&match.ID,
 			&match.EventID,
+			&match.RoundID,
 			&match.Round,
 			&match.MatchNumber,
 			&match.MatchType,
@@ -139,7 +146,12 @@ func (r *MatchRepository) GetMatchesByEvent(
 			&match.Status,
 			&match.WinnerTeamID,
 			&match.LoserTeamID,
-			&match.NextMatchID,
+			&match.WinnerNextMatchID,
+			&match.LoserNextMatchID,
+			&match.Team1SourceMatchID,
+			&match.Team1SourceType,
+			&match.Team2SourceMatchID,
+			&match.Team2SourceType,
 		)
 
 		if err != nil {
@@ -298,7 +310,7 @@ func (r *MatchRepository) getConfirmedTeams(
 		`
 		SELECT
 			t.id,
-			t.team_name,
+			COALESCE(t.team_name, ''),
 			p1.name,
 			p2.name
 		FROM teams t
@@ -322,7 +334,7 @@ func (r *MatchRepository) getConfirmedTeams(
 
 	defer rows.Close()
 
-	var teams []model.TeamSummary
+	teams := make([]model.TeamSummary, 0)
 
 	for rows.Next() {
 
@@ -362,7 +374,7 @@ func (r *MatchRepository) getPreviousRoundWinners(
 		`
 		SELECT
 			t.id,
-			t.team_name,
+			COALESCE(t.team_name, ''),
 			p1.name,
 			p2.name
 		FROM matches m
@@ -396,7 +408,7 @@ func (r *MatchRepository) getPreviousRoundWinners(
 
 	defer rows.Close()
 
-	var teams []model.TeamSummary
+	teams := make([]model.TeamSummary, 0)
 
 	for rows.Next() {
 
@@ -506,6 +518,197 @@ func (r *MatchRepository) CreateMatch(
 	}
 
 	return createdID, nil
+}
+
+func (r *MatchRepository) CreateMatchTx(
+	ctx context.Context,
+	tx pgx.Tx,
+	roundID uuid.UUID,
+	matchNumber int,
+	team1ID *uuid.UUID,
+	team2ID *uuid.UUID,
+	matchType string,
+) (uuid.UUID, error) {
+
+	id := uuid.New()
+
+	_, err := tx.Exec(
+		ctx,
+		`
+		INSERT INTO matches (
+			id,
+			event_id,
+			round_id,
+			round,
+			match_number,
+			match_type,
+			team1_id,
+			team2_id,
+			status
+		)
+		SELECT
+			$1,
+			event_id,
+			$2,
+			round_name,
+			$3,
+			$4,
+			$5,
+			$6,
+			'SCHEDULED'
+		FROM tournament_rounds
+		WHERE id = $2
+		`,
+		id,
+		roundID,
+		matchNumber,
+		matchType,
+		team1ID,
+		team2ID,
+	)
+
+	if err != nil {
+		return uuid.Nil, fmt.Errorf(
+			"create match tx: %w",
+			err,
+		)
+	}
+
+	return id, nil
+}
+
+func (r *MatchRepository) CreateMatchSlotTx(
+	ctx context.Context,
+	tx pgx.Tx,
+	roundID uuid.UUID,
+	matchNumber int,
+	matchType string,
+	team1ID *uuid.UUID,
+	team2ID *uuid.UUID,
+	team1SourceMatchID *uuid.UUID,
+	team1SourceType *string,
+	team2SourceMatchID *uuid.UUID,
+	team2SourceType *string,
+) (uuid.UUID, error) {
+	id := uuid.New()
+
+	var createdID uuid.UUID
+
+	err := tx.QueryRow(
+		ctx,
+		`
+		INSERT INTO matches (
+			id,
+			event_id,
+			round_id,
+			round,
+			match_number,
+			match_type,
+			team1_id,
+			team2_id,
+			team1_source_match_id,
+			team1_source_type,
+			team2_source_match_id,
+			team2_source_type,
+			status
+		)
+		SELECT
+			$1,
+			event_id,
+			$2,
+			round_name,
+			$3,
+			$4,
+			$5,
+			$6,
+			$7,
+			$8,
+			$9,
+			$10,
+			'SCHEDULED'
+		FROM tournament_rounds
+		WHERE id = $2
+		RETURNING id
+		`,
+		id,
+		roundID,
+		matchNumber,
+		matchType,
+		team1ID,
+		team2ID,
+		team1SourceMatchID,
+		team1SourceType,
+		team2SourceMatchID,
+		team2SourceType,
+	).Scan(&createdID)
+
+	if err != nil {
+		return uuid.Nil, fmt.Errorf(
+			"create match slot tx: %w",
+			err,
+		)
+	}
+
+	return createdID, nil
+}
+
+func (r *MatchRepository) CountByRoundTx(
+	ctx context.Context,
+	tx pgx.Tx,
+	roundID uuid.UUID,
+) (int, error) {
+
+	var count int
+
+	err := tx.QueryRow(
+		ctx,
+		`
+		SELECT COUNT(*)
+		FROM matches
+		WHERE round_id = $1
+		`,
+		roundID,
+	).Scan(&count)
+
+	return count, err
+}
+
+func (r *MatchRepository) CompleteMatchTx(
+	ctx context.Context,
+	tx pgx.Tx,
+	matchID uuid.UUID,
+	winnerID uuid.UUID,
+	loserID uuid.UUID,
+) error {
+
+	result, err := tx.Exec(
+		ctx,
+		`
+		UPDATE matches
+		SET
+			status = 'COMPLETED',
+			winner_team_id = $2,
+			loser_team_id = $3,
+			updated_at = NOW()
+		WHERE id = $1
+		  AND status = 'IN_PROGRESS'
+		`,
+		matchID,
+		winnerID,
+		loserID,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	if result.RowsAffected() != 1 {
+		return fmt.Errorf(
+			"match cannot be completed",
+		)
+	}
+
+	return nil
 }
 
 func (r *MatchRepository) GetNextMatchNumber(

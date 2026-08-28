@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/jakaria9001/badminton-tournament/backend/internal/model"
@@ -219,6 +220,52 @@ func (r *RoundRepository) GetByID(
 	if err != nil {
 		return nil, fmt.Errorf(
 			"get round: %w",
+			err,
+		)
+	}
+
+	return &round, nil
+}
+
+func (r *RoundRepository) GetByIDTx(
+	ctx context.Context,
+	tx pgx.Tx,
+	id uuid.UUID,
+) (*model.TournamentRound, error) {
+
+	var round model.TournamentRound
+
+	err := tx.QueryRow(
+		ctx,
+		`
+		SELECT
+			id,
+			event_id,
+			round_number,
+			round_name,
+			pairing_method,
+			status,
+			locked_at,
+			completed_at
+		FROM tournament_rounds
+		WHERE id = $1
+		FOR UPDATE
+		`,
+		id,
+	).Scan(
+		&round.ID,
+		&round.EventID,
+		&round.RoundNumber,
+		&round.RoundName,
+		&round.PairingMethod,
+		&round.Status,
+		&round.LockedAt,
+		&round.CompletedAt,
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf(
+			"get round for update: %w",
 			err,
 		)
 	}

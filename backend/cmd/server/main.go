@@ -104,6 +104,7 @@ func main() {
 
 	drawService :=
 		service.NewDrawService(
+			db,
 			roundRepository,
 			matchRepository,
 			advancementRepository,
