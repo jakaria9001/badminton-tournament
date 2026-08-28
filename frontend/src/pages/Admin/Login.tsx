@@ -20,7 +20,7 @@ export default function Login() {
 
     try {
       await login(email, password);
-      navigate("/admin/registrations", { replace: true });
+      navigate("/admin", { replace: true });
     } catch (loginError) {
       setError(
         loginError instanceof Error

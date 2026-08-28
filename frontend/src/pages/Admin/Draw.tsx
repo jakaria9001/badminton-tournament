@@ -31,6 +31,7 @@ interface Match {
   team2: Team | null;
   status: string;
   winnerTeamId: string | null;
+  loserTeamId: string | null;
 }
 
 function Draw() {
@@ -48,8 +49,11 @@ function Draw() {
   const finalMatch = Object.values(matches)
     .flat()
     .find((match) => match.round === "FINAL" && match.status === "COMPLETED");
-  const champion = finalMatch && finalMatch.winnerTeamId
+  const champion = finalMatch?.winnerTeamId
     ? [finalMatch.team1, finalMatch.team2].find((team) => team?.id === finalMatch.winnerTeamId) ?? null
+    : null;
+  const runnerUp = finalMatch?.loserTeamId
+    ? [finalMatch.team1, finalMatch.team2].find((team) => team?.id === finalMatch.loserTeamId) ?? null
     : null;
 
   const request = useCallback(async (url: string, options: RequestInit = {}) => {
@@ -193,7 +197,7 @@ function Draw() {
       <PublicHeader />
       <main className="flex-1 px-4 py-8">
         <div className="mx-auto max-w-5xl">
-          <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+          <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Admin</p>
               <h1 className="mt-2 text-3xl font-bold text-slate-950">Tournament Draw</h1>
@@ -218,13 +222,14 @@ function Draw() {
             </div>
           )}
 
-          {champion && (
+          {champion && runnerUp && (
             <section className="mb-6 overflow-hidden rounded-2xl bg-amber-400 shadow-lg">
               <div className="flex flex-col gap-5 px-6 py-7 sm:flex-row sm:items-center sm:justify-between sm:px-8">
                 <div>
                   <p className="text-sm font-bold uppercase tracking-[0.2em] text-amber-950">Tournament champions</p>
                   <h2 className="mt-2 text-3xl font-black text-slate-950">{champion.player1} &amp; {champion.player2}</h2>
-                  <p className="mt-2 font-semibold text-amber-950">{champion.teamName || "Championship pair"}</p>
+                  <p className="mt-2 font-semibold text-amber-950">{champion.teamName}</p>
+                  <p className="mt-3 text-sm font-bold text-amber-950">Runner-up: {runnerUp.player1} &amp; {runnerUp.player2}</p>
                 </div>
                 <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full border-4 border-amber-950/20 bg-white/70 text-4xl shadow-inner" aria-hidden="true">
                   ★

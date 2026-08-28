@@ -24,7 +24,7 @@ export default function PublicHeader() {
           <a href="/" className="transition hover:text-white">Home</a>
           <a href="/teams" className="transition hover:text-white">Teams</a>
           <a href="/register" className="transition hover:text-white">Register</a>
-          <a href={hasAdminToken ? "/admin/registrations" : "/admin/login"} className="transition hover:text-white">
+          <a href={hasAdminToken ? "/admin" : "/admin/login"} className="transition hover:text-white">
             {hasAdminToken ? "Dashboard" : "Login"}
           </a>
         </nav>

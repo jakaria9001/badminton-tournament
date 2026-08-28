@@ -9,6 +9,7 @@ import Registration from "./pages/Registration";
 import Teams from "./pages/Teams";
 import Registrations from "./pages/Admin/Registrations";
 import Login from "./pages/Admin/Login";
+import ControlCenter from "./pages/Admin/ControlCenter";
 import Draw from "./pages/Admin/Draw";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -35,6 +36,15 @@ function App() {
         <Route
           path="/admin/login"
           element={<Login />}
+        />
+
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute>
+              <ControlCenter />
+            </ProtectedRoute>
+          }
         />
 
         <Route
