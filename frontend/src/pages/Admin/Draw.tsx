@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getAdminToken, logout } from "../../api/authApi";
+import PublicFooter from "../../components/PublicFooter";
+import PublicHeader from "../../components/PublicHeader";
 
 const EVENT_ID = "00000000-0000-0000-0000-000000000002";
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -145,34 +147,46 @@ function Draw() {
     }
   }
 
-  if (loading) return <div className="p-10">Loading draw...</div>;
+  if (loading) {
+    return (
+      <div className="flex min-h-screen flex-col bg-slate-950 text-white">
+        <PublicHeader />
+        <main className="flex flex-1 items-center justify-center px-5 py-10">
+          Loading draw...
+        </main>
+        <PublicFooter />
+      </div>
+    );
+  }
 
   return (
-    <main className="min-h-screen bg-slate-100 px-4 py-8">
-      <div className="mx-auto max-w-5xl">
-        <header className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-slate-900 p-6 text-white shadow-lg">
-          <div>
-            <p className="text-sm uppercase tracking-[0.18em] text-slate-300">Admin</p>
-            <h1 className="mt-2 text-3xl font-bold">Tournament Draw</h1>
+    <div className="flex min-h-screen flex-col bg-slate-100 text-slate-900">
+      <PublicHeader />
+      <main className="flex-1 px-4 py-8">
+        <div className="mx-auto max-w-5xl">
+          <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Admin</p>
+              <h1 className="mt-2 text-3xl font-bold text-slate-950">Tournament Draw</h1>
+            </div>
+            <div className="flex gap-2">
+              <button className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50" onClick={() => navigate("/admin/registrations")} type="button">Registrations</button>
+              <button className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-100" onClick={() => { logout(); navigate("/admin/login", { replace: true }); }} type="button">Sign out</button>
+            </div>
           </div>
-          <div className="flex gap-2">
-            <button className="rounded-lg border border-white/20 px-4 py-2 text-sm font-semibold" onClick={() => navigate("/admin/registrations")} type="button">Registrations</button>
-            <button className="rounded-lg border border-red-400/40 px-4 py-2 text-sm font-semibold text-red-200" onClick={() => { logout(); navigate("/admin/login", { replace: true }); }} type="button">Sign out</button>
+
+          {message && <p className="mb-4 rounded-lg bg-white p-4 text-sm font-medium text-slate-700 shadow-sm">{message}</p>}
+
+          <div className="mb-6 flex justify-end">
+            <button className="rounded-lg bg-emerald-600 px-4 py-2 font-semibold text-white disabled:opacity-50" disabled={busy !== null} onClick={() => void createRound()} type="button">Create round</button>
           </div>
-        </header>
 
-        {message && <p className="mb-4 rounded-lg bg-white p-4 text-sm font-medium text-slate-700 shadow-sm">{message}</p>}
-
-        <div className="mb-6 flex justify-end">
-          <button className="rounded-lg bg-emerald-600 px-4 py-2 font-semibold text-white disabled:opacity-50" disabled={busy !== null} onClick={() => void createRound()} type="button">Create round</button>
-        </div>
-
-        <div className="space-y-4">
-          {rounds.length === 0 && <div className="rounded-2xl bg-white p-8 text-center text-slate-500 shadow-sm">No rounds created yet.</div>}
-          {rounds.map((round) => {
-            const availableTeams = teams[round.id] ?? [];
-            return (
-              <section className="rounded-2xl bg-white p-6 shadow-sm" key={round.id}>
+          <div className="space-y-4">
+            {rounds.length === 0 && <div className="rounded-2xl bg-white p-8 text-center text-slate-500 shadow-sm">No rounds created yet.</div>}
+            {rounds.map((round) => {
+              const availableTeams = teams[round.id] ?? [];
+              return (
+                <section className="rounded-2xl bg-white p-6 shadow-sm" key={round.id}>
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <h2 className="text-xl font-bold text-slate-900">{round.roundName}</h2>
@@ -199,12 +213,14 @@ function Draw() {
                   </select>
                   <button className="rounded-lg bg-amber-500 px-4 py-2 font-semibold text-white disabled:opacity-50" disabled={busy !== null || round.status !== "OPEN"} onClick={() => void createMatch(round)} type="button">Add match</button>
                 </div>
-              </section>
-            );
-          })}
+                </section>
+              );
+            })}
+          </div>
         </div>
-      </div>
-    </main>
+      </main>
+      <PublicFooter />
+    </div>
   );
 }
 
