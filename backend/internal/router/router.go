@@ -18,6 +18,8 @@ func NewRouter(
 	registrationHandler *handler.RegistrationHandler,
 	eventHandler *handler.EventHandler,
 	authHandler *handler.AuthHandler,
+	matchHandler *handler.MatchHandler,
+	roundHandler *handler.RoundHandler,
 	jwtSecret string,
 ) http.Handler {
 	allowedOrigins := strings.Split(os.Getenv("CORS_ALLOWED_ORIGINS"), ",")
@@ -85,6 +87,16 @@ func NewRouter(
 				"/teams",
 				registrationHandler.GetTeams,
 			)
+
+			r.Get(
+				"/matches",
+				matchHandler.GetByEvent,
+			)
+
+			r.Get(
+				"/rounds",
+				roundHandler.GetByEvent,
+			)
 		})
 
 		r.With(loginLimiter.Middleware).Post(
@@ -97,6 +109,36 @@ func NewRouter(
 
 		r.Use(
 			middleware.RequireAuth(jwtSecret),
+		)
+
+		r.Post(
+			"/events/{eventID}/rounds",
+			roundHandler.Create,
+		)
+
+		r.Get(
+			"/events/{eventID}/rounds",
+			roundHandler.GetByEvent,
+		)
+
+		r.Get(
+			"/events/{eventID}/rounds/{roundID}/available-teams",
+			roundHandler.GetAvailableTeams,
+		)
+
+		r.Post(
+			"/rounds/{roundID}/matches",
+			matchHandler.Create,
+		)
+
+		r.Post(
+			"/rounds/{roundID}/generate",
+			roundHandler.Generate,
+		)
+
+		r.Post(
+			"/rounds/{roundID}/lock",
+			roundHandler.Lock,
 		)
 
 		r.Get(

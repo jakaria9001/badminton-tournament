@@ -213,6 +213,14 @@ function Registrations() {
                             <div className="flex items-center gap-2">
                                 <button
                                     className="rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
+                                    onClick={() => navigate("/admin/draw")}
+                                    type="button"
+                                >
+                                    Draw
+                                </button>
+
+                                <button
+                                    className="rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
                                     onClick={() => void loadRegistrations()}
                                     type="button"
                                 >

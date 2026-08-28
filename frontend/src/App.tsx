@@ -9,6 +9,7 @@ import Registration from "./pages/Registration";
 import Teams from "./pages/Teams";
 import Registrations from "./pages/Admin/Registrations";
 import Login from "./pages/Admin/Login";
+import Draw from "./pages/Admin/Draw";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
@@ -41,6 +42,15 @@ function App() {
           element={
             <ProtectedRoute>
               <Registrations />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/draw"
+          element={
+            <ProtectedRoute>
+              <Draw />
             </ProtectedRoute>
           }
         />

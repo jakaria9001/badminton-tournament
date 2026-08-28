@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/jakaria9001/badminton-tournament/backend/internal/database"
+	"github.com/jakaria9001/badminton-tournament/backend/internal/draw"
 	"github.com/jakaria9001/badminton-tournament/backend/internal/handler"
 	"github.com/jakaria9001/badminton-tournament/backend/internal/repository"
 	"github.com/jakaria9001/badminton-tournament/backend/internal/router"
@@ -48,6 +49,10 @@ func main() {
 
 	log.Println("Connected to PostgreSQL")
 
+	// generator
+	generator :=
+		draw.NewGenerator()
+
 	// Repository
 	registrationRepository :=
 		repository.NewRegistrationRepository(db)
@@ -57,6 +62,15 @@ func main() {
 
 	userRepository :=
 		repository.NewUserRepository(db)
+
+	matchRepository :=
+		repository.NewMatchRepository(db)
+
+	roundRepository :=
+		repository.NewRoundRepository(db)
+
+	advancementRepository :=
+		repository.NewAdvancementRepository(db)
 
 	// Service
 	registrationService :=
@@ -76,6 +90,26 @@ func main() {
 			jwtSecret,
 		)
 
+	matchService :=
+		service.NewMatchService(
+			matchRepository,
+			roundRepository,
+		)
+
+	roundService :=
+		service.NewRoundService(
+			roundRepository,
+			matchRepository,
+		)
+
+	drawService :=
+		service.NewDrawService(
+			roundRepository,
+			matchRepository,
+			advancementRepository,
+			generator,
+		)
+
 	// Handler
 	registrationHandler :=
 		handler.NewRegistrationHandler(
@@ -92,11 +126,24 @@ func main() {
 			authService,
 		)
 
+	matchHandler :=
+		handler.NewMatchHandler(
+			matchService,
+		)
+
+	roundHandler :=
+		handler.NewRoundHandler(
+			roundService,
+			drawService,
+		)
+
 	// Router
 	r := router.NewRouter(
 		registrationHandler,
 		eventHandler,
 		authHandler,
+		matchHandler,
+		roundHandler,
 		jwtSecret,
 	)
 
