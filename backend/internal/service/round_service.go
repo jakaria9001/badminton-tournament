@@ -41,6 +41,58 @@ func (s *RoundService) Create(
 		)
 	}
 
+	rounds, err := s.repository.GetByEvent(ctx, eventID)
+	if err != nil {
+		return nil, err
+	}
+
+	expectedRoundNumber := len(rounds) + 1
+	if roundNumber != expectedRoundNumber {
+		return nil, fmt.Errorf(
+			"next round must be round %d",
+			expectedRoundNumber,
+		)
+	}
+
+	if len(rounds) > 0 && rounds[len(rounds)-1].Status != model.RoundCompleted {
+		return nil, fmt.Errorf(
+			"round %d must be COMPLETED before creating the next round",
+			rounds[len(rounds)-1].RoundNumber,
+		)
+	}
+
+	teamCount, err := s.matchRepository.CountConfirmedTeamsByEvent(ctx, eventID)
+	if err != nil {
+		return nil, err
+	}
+	if teamCount < 2 {
+		return nil, fmt.Errorf(
+			"at least 2 confirmed teams are required to create rounds",
+		)
+	}
+
+	maxRounds := 0
+	bracketSize := 1
+	for bracketSize < teamCount {
+		bracketSize *= 2
+		maxRounds++
+	}
+	if roundNumber > maxRounds {
+		return nil, fmt.Errorf(
+			"cannot create round %d: this event supports a maximum of %d rounds",
+			roundNumber,
+			maxRounds,
+		)
+	}
+
+	if roundNumber == maxRounds {
+		roundName = "FINAL"
+	} else if roundNumber == maxRounds-1 {
+		roundName = "SEMIFINAL"
+	} else {
+		roundName = fmt.Sprintf("ROUND_%d", roundNumber)
+	}
+
 	return s.repository.Create(
 		ctx,
 		eventID,

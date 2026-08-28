@@ -102,6 +102,12 @@ func main() {
 			matchRepository,
 		)
 
+	resultService :=
+		service.NewResultService(
+			db,
+			matchRepository,
+		)
+
 	drawService :=
 		service.NewDrawService(
 			db,
@@ -138,6 +144,11 @@ func main() {
 			drawService,
 		)
 
+	resultHandler :=
+		handler.NewResultHandler(
+			resultService,
+		)
+
 	// Router
 	r := router.NewRouter(
 		registrationHandler,
@@ -145,6 +156,7 @@ func main() {
 		authHandler,
 		matchHandler,
 		roundHandler,
+		resultHandler,
 		jwtSecret,
 	)
 

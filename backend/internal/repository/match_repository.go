@@ -691,7 +691,7 @@ func (r *MatchRepository) CompleteMatchTx(
 			loser_team_id = $3,
 			updated_at = NOW()
 		WHERE id = $1
-		  AND status = 'IN_PROGRESS'
+			AND status IN ('SCHEDULED', 'IN_PROGRESS')
 		`,
 		matchID,
 		winnerID,
@@ -752,4 +752,31 @@ func (r *MatchRepository) CountByRound(
 	).Scan(&count)
 
 	return count, err
+}
+
+func (r *MatchRepository) CountConfirmedTeamsByEvent(
+	ctx context.Context,
+	eventID uuid.UUID,
+) (int, error) {
+	var count int
+
+	err := r.db.QueryRow(
+		ctx,
+		`
+		SELECT COUNT(*)
+		FROM teams
+		WHERE event_id = $1
+		  AND status = 'CONFIRMED'
+		`,
+		eventID,
+	).Scan(&count)
+
+	if err != nil {
+		return 0, fmt.Errorf(
+			"count confirmed teams: %w",
+			err,
+		)
+	}
+
+	return count, nil
 }

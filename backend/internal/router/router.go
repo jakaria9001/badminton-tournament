@@ -20,6 +20,7 @@ func NewRouter(
 	authHandler *handler.AuthHandler,
 	matchHandler *handler.MatchHandler,
 	roundHandler *handler.RoundHandler,
+	resultHandler *handler.ResultHandler,
 	jwtSecret string,
 ) http.Handler {
 	allowedOrigins := strings.Split(os.Getenv("CORS_ALLOWED_ORIGINS"), ",")
@@ -139,6 +140,11 @@ func NewRouter(
 		r.Post(
 			"/rounds/{roundID}/lock",
 			roundHandler.Lock,
+		)
+
+		r.Post(
+			"/matches/{matchID}/result",
+			resultHandler.Submit,
 		)
 
 		r.Get(
