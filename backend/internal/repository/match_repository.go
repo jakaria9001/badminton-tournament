@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -55,6 +56,15 @@ func (r *MatchRepository) GetMatchesByEvent(
 			m.team1_source_type,
 			m.team2_source_match_id,
 			m.team2_source_type
+			,COALESCE((
+				SELECT json_agg(json_build_object(
+					'gameNumber', mg.game_number,
+					'team1Score', mg.team1_score,
+					'team2Score', mg.team2_score
+				) ORDER BY mg.game_number)
+				FROM match_games mg
+				WHERE mg.match_id = m.id
+			), '[]'::json) AS games
 		FROM matches m
 
 		LEFT JOIN teams t1
@@ -121,6 +131,7 @@ func (r *MatchRepository) GetMatchesByEvent(
 			team2Name *string
 			player3   *string
 			player4   *string
+			gamesJSON []byte
 		)
 
 		err := rows.Scan(
@@ -152,6 +163,7 @@ func (r *MatchRepository) GetMatchesByEvent(
 			&match.Team1SourceType,
 			&match.Team2SourceMatchID,
 			&match.Team2SourceType,
+			&gamesJSON,
 		)
 
 		if err != nil {
@@ -159,6 +171,10 @@ func (r *MatchRepository) GetMatchesByEvent(
 				"scan match: %w",
 				err,
 			)
+		}
+
+		if err := json.Unmarshal(gamesJSON, &match.Games); err != nil {
+			return nil, fmt.Errorf("decode match games: %w", err)
 		}
 
 		if team1ID != nil {

@@ -131,6 +131,18 @@ function Home() {
                   >
                     View Teams
                   </button>
+
+                  <button
+                    className="rounded-xl bg-amber-400 px-6 py-3 font-bold text-slate-950 transition hover:bg-amber-300"
+                    onClick={() => {
+                      window.location.href = "/live-scores";
+                    }}
+                    type="button"
+                  >
+                    Live Scores
+                  </button>
+
+                  
                 </div>
 
                 <div className="mt-8 flex flex-wrap gap-4 text-sm text-slate-300">

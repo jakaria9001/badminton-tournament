@@ -222,7 +222,7 @@ export default function ControlCenter() {
             <div className="grid gap-4 sm:grid-cols-3">
               <ActionTile label="Registrations" description="Confirm teams and manage entries" onClick={() => navigate("/admin/registrations")} />
               <ActionTile label="Draw & results" description="Create rounds and enter scores" onClick={() => navigate("/admin/draw")} />
-              <ActionTile label="Live scores" description="View the public tournament board" onClick={() => navigate("/")} />
+              <ActionTile label="Live scores" description="View the public tournament board" onClick={() => navigate("/live-scores")} />
             </div>
           </section>
         </div>

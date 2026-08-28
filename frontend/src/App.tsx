@@ -7,6 +7,7 @@ import {
 import Home from "./pages/Home";
 import Registration from "./pages/Registration";
 import Teams from "./pages/Teams";
+import LiveScores from "./pages/LiveScores";
 import Registrations from "./pages/Admin/Registrations";
 import Login from "./pages/Admin/Login";
 import ControlCenter from "./pages/Admin/ControlCenter";
@@ -31,6 +32,11 @@ function App() {
         <Route
           path="/teams"
           element={<Teams />}
+        />
+
+        <Route
+          path="/live-scores"
+          element={<LiveScores />}
         />
 
         <Route
