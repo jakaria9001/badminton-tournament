@@ -137,6 +137,33 @@ func (h *EventHandler) Update(
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (h *EventHandler) UpdateAdmin(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	eventID, err := uuid.Parse(chi.URLParam(r, "eventID"))
+	if err != nil {
+		http.Error(w, "invalid event ID", http.StatusBadRequest)
+		return
+	}
+
+	var request model.EventAdminAssignmentRequest
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	if err := h.service.UpdateEventAdmin(r.Context(), eventID, request.AssignedAdminID); err != nil {
+		if errors.Is(err, model.ErrEventNotFound) {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func NewEventHandler(
 	service *service.EventService,
 ) *EventHandler {

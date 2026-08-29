@@ -159,6 +159,26 @@ export default function SuperAdminDashboard() {
     }
   }
 
+  async function updateEventAdmin(eventId: string, assignedAdminId: string) {
+    setBusy(`assignment-${eventId}`);
+    setError("");
+    setSuccess("");
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/admin/superadmin/events/${eventId}/admin`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${getAdminToken()}` },
+        body: JSON.stringify({ assignedAdminId: assignedAdminId || null }),
+      });
+      if (!response.ok) throw new Error(await response.text());
+      await loadDashboard();
+      setSuccess("Event administrator updated.");
+    } catch (assignmentError) {
+      setError(assignmentError instanceof Error ? assignmentError.message : "Unable to update event administrator");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   function signOut() {
     logout();
     navigate("/admin/login", { replace: true });
@@ -252,7 +272,7 @@ export default function SuperAdminDashboard() {
                     </select>
                   )}
                 </div>
-                <button className="w-full rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-bold text-slate-950 disabled:cursor-not-allowed disabled:opacity-60" disabled={busy !== null || !adminName || !adminEmail || !adminPassword || (adminRole === "ADMIN" && !adminEventId)} onClick={() => void createAdminAccount()} type="button">
+                <button className="w-full rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-bold text-slate-950 disabled:cursor-not-allowed disabled:opacity-60" disabled={busy !== null || !adminName || !adminEmail || !adminPassword} onClick={() => void createAdminAccount()} type="button">
                   {busy === "admin" ? "Creating..." : "Create admin"}
                 </button>
               </div>
@@ -293,7 +313,18 @@ export default function SuperAdminDashboard() {
                     <p className="font-bold text-slate-950">{event.name}</p>
                     <p className="text-sm text-slate-600">{event.status} · {event.registeredTeams} teams registered</p>
                   </div>
-                  <button className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700" onClick={() => void deleteEvent(event)} type="button">Delete</button>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <label className="text-sm font-semibold text-slate-700">
+                      <span className="sr-only">Assigned administrator for {event.name}</span>
+                      <select className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 sm:w-56" disabled={busy !== null} onChange={(selection) => void updateEventAdmin(event.id, selection.target.value)} value={admins.find((admin) => admin.role === "ADMIN" && admin.eventId === event.id)?.id ?? ""}>
+                        <option value="">No assigned admin</option>
+                        {admins.filter((admin) => admin.role === "ADMIN").map((admin) => (
+                          <option key={admin.id} value={admin.id}>{admin.name}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <button className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 disabled:cursor-not-allowed disabled:opacity-60" disabled={busy !== null} onClick={() => void deleteEvent(event)} type="button">Delete</button>
+                  </div>
                 </div>
               ))}
               {events.length === 0 && <p className="text-sm text-slate-500">No tournaments created yet.</p>}

@@ -30,14 +30,13 @@ func main() {
 	var eventID *uuid.UUID
 	if role == "ADMIN" {
 		configuredEventID := strings.TrimSpace(os.Getenv("ADMIN_EVENT_ID"))
-		if configuredEventID == "" {
-			log.Fatal("ADMIN_EVENT_ID is required for ADMIN role")
+		if configuredEventID != "" {
+			parsedEventID, err := uuid.Parse(configuredEventID)
+			if err != nil {
+				log.Fatal("ADMIN_EVENT_ID must be a valid UUID")
+			}
+			eventID = &parsedEventID
 		}
-		parsedEventID, err := uuid.Parse(configuredEventID)
-		if err != nil {
-			log.Fatal("ADMIN_EVENT_ID must be a valid UUID")
-		}
-		eventID = &parsedEventID
 	}
 
 	passwordHash, err := bcrypt.GenerateFromPassword(

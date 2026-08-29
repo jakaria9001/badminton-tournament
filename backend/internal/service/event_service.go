@@ -65,3 +65,7 @@ func (s *EventService) DeleteEvent(ctx context.Context, eventID uuid.UUID) error
 func (s *EventService) UpdateEvent(ctx context.Context, eventID uuid.UUID, request model.EventAdminRequest) error {
 	return s.repository.UpdateEvent(ctx, eventID, request)
 }
+
+func (s *EventService) UpdateEventAdmin(ctx context.Context, eventID uuid.UUID, assignedAdminID *string) error {
+	return s.repository.UpdateEventAdmin(ctx, eventID, assignedAdminID)
+}

@@ -132,11 +132,40 @@ func assignAdminToEvent(ctx context.Context, tx pgx.Tx, eventID uuid.UUID, assig
 		return fmt.Errorf("admin not found or not eligible for assignment")
 	}
 
-	if _, err := tx.Exec(ctx, `UPDATE users SET event_id = NULL WHERE event_id = $1 AND role = 'ADMIN'`, eventID); err != nil {
+	if _, err := tx.Exec(ctx, `UPDATE users SET event_id = NULL WHERE (event_id = $1 OR id = $2) AND role = 'ADMIN'`, eventID, adminID); err != nil {
 		return fmt.Errorf("clear event admin assignment: %w", err)
 	}
 	if _, err := tx.Exec(ctx, `UPDATE users SET event_id = $1 WHERE id = $2`, eventID, adminID); err != nil {
 		return fmt.Errorf("assign admin to event: %w", err)
+	}
+	return nil
+}
+
+func (r *EventRepository) UpdateEventAdmin(ctx context.Context, eventID uuid.UUID, assignedAdminID *string) error {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin event admin assignment: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var eventExists bool
+	if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM events WHERE id = $1)`, eventID).Scan(&eventExists); err != nil {
+		return fmt.Errorf("check event: %w", err)
+	}
+	if !eventExists {
+		return model.ErrEventNotFound
+	}
+
+	if assignedAdminID == nil || strings.TrimSpace(*assignedAdminID) == "" {
+		if _, err := tx.Exec(ctx, `UPDATE users SET event_id = NULL WHERE event_id = $1 AND role = 'ADMIN'`, eventID); err != nil {
+			return fmt.Errorf("clear event admin assignment: %w", err)
+		}
+	} else if err := assignAdminToEvent(ctx, tx, eventID, assignedAdminID); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit event admin assignment: %w", err)
 	}
 	return nil
 }

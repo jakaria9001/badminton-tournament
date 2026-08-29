@@ -22,3 +22,7 @@ type EventAdminRequest struct {
 	Status               string  `json:"status"`
 	AssignedAdminID      *string `json:"assignedAdminId,omitempty"`
 }
+
+type EventAdminAssignmentRequest struct {
+	AssignedAdminID *string `json:"assignedAdminId"`
+}

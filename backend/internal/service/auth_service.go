@@ -118,10 +118,7 @@ func (s *AuthService) CreateAdmin(
 	if request.Role != model.RoleAdmin && request.Role != model.RoleSuperAdmin {
 		return fmt.Errorf("role must be ADMIN or SUPER_ADMIN")
 	}
-	if request.Role == model.RoleAdmin {
-		if strings.TrimSpace(request.EventID) == "" {
-			return fmt.Errorf("event assignment is required for admin users")
-		}
+	if request.Role == model.RoleAdmin && strings.TrimSpace(request.EventID) != "" {
 		if _, err := uuid.Parse(request.EventID); err != nil {
 			return fmt.Errorf("invalid event ID")
 		}
@@ -133,7 +130,7 @@ func (s *AuthService) CreateAdmin(
 	}
 
 	var eventID *uuid.UUID
-	if request.Role == model.RoleAdmin {
+	if request.Role == model.RoleAdmin && strings.TrimSpace(request.EventID) != "" {
 		parsedEventID, err := uuid.Parse(request.EventID)
 		if err != nil {
 			return fmt.Errorf("invalid event ID")

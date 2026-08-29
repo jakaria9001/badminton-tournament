@@ -116,11 +116,11 @@ export default function LiveScores() {
               <div>
                 <p className="text-3xl" aria-hidden="true">🏸</p>
                 <h1 className="mt-5 text-3xl font-black tracking-tight">ShuttleHub</h1>
-                <p className="mt-1 text-sm font-semibold uppercase tracking-[0.18em] text-slate-400">Men&apos;s Doubles 2026</p>
+                <p className="mt-1 text-sm font-semibold uppercase tracking-[0.18em] text-slate-400">Men's Doubles 2026</p>
               </div>
               <span className="inline-flex items-center gap-2 rounded-full bg-emerald-400/15 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-emerald-300"><span className="h-2 w-2 rounded-full bg-emerald-400" aria-hidden="true" />{statusLabel}</span>
             </div>
-            <p className="mt-7 text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Men&apos;s Doubles</p>
+            <p className="mt-7 text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Men's Doubles</p>
             <p className="mt-2 text-lg font-semibold text-white">{event?.name ?? "Tournament live scores"}</p>
           </section>
 

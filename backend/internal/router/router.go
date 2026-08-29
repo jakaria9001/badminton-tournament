@@ -107,6 +107,7 @@ func NewRouter(
 			r.Get("/events", eventHandler.ListAdmin)
 			r.Post("/events", eventHandler.Create)
 			r.Put("/events/{eventID}", eventHandler.Update)
+			r.Put("/events/{eventID}/admin", eventHandler.UpdateAdmin)
 			r.Delete("/events/{eventID}", eventHandler.Delete)
 			r.Get("/admins", authHandler.ListAdmins)
 			r.Post("/admins", authHandler.CreateAdmin)
