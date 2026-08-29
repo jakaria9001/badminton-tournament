@@ -141,6 +141,10 @@ func determineWinner(
 	if len(games) > scoring.BestOf {
 		return uuid.Nil, uuid.Nil, fmt.Errorf("too many games for best-of-%d match", scoring.BestOf)
 	}
+	maxGamesNeeded := (winsNeeded - 1) * 2 + 1
+	if len(games) > maxGamesNeeded {
+		return uuid.Nil, uuid.Nil, fmt.Errorf("too many games submitted after match winner determined")
+	}
 	if team1Wins >= winsNeeded {
 		return team1ID, team2ID, nil
 	}

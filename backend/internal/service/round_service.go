@@ -86,9 +86,9 @@ func (s *RoundService) Create(
 	}
 
 	if roundNumber == maxRounds {
-		roundName = "FINAL"
+		roundName = model.Final
 	} else if roundNumber == maxRounds-1 {
-		roundName = "SEMIFINAL"
+		roundName = model.SemiFinal1
 	} else {
 		roundName = fmt.Sprintf("ROUND_%d", roundNumber)
 	}

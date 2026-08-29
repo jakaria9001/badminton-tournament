@@ -2,7 +2,7 @@
 import { useNavigate } from "react-router-dom";
 import { listAdminEvents } from "../api/eventApi";
 import type { EventInfo } from "../types/event";
-import { getAdminProfile, getAdminToken, logout, type AdminProfile } from "../api/authApi";
+import { getAdminProfile, logout, type AdminProfile } from "../api/authApi";
 import PublicFooter from "../components/PublicFooter";
 import PublicHeader from "../components/PublicHeader";
 
@@ -43,7 +43,6 @@ export default function SuperAdminDashboard() {
       listAdminEvents(),
       fetch(`${API_BASE_URL}/api/v1/admin/superadmin/admins`, {
 		credentials: "include",
-        headers: { Authorization: `Bearer ${getAdminToken()}` },
       }),
     ]);
 
@@ -87,7 +86,7 @@ export default function SuperAdminDashboard() {
       const response = await fetch(`${API_BASE_URL}/api/v1/admin/superadmin/events`, {
 		credentials: "include",
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${getAdminToken()}` },
+    		headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name,
           venueName,
@@ -123,7 +122,7 @@ export default function SuperAdminDashboard() {
       const response = await fetch(`${API_BASE_URL}/api/v1/admin/superadmin/admins`, {
 		credentials: "include",
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${getAdminToken()}` },
+    		headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: adminName,
           email: adminEmail,
@@ -155,7 +154,6 @@ export default function SuperAdminDashboard() {
       const response = await fetch(`${API_BASE_URL}/api/v1/admin/superadmin/events/${event.id}`, {
 		credentials: "include",
         method: "DELETE",
-        headers: { Authorization: `Bearer ${getAdminToken()}` },
       });
       if (!response.ok) throw new Error(await response.text());
       await loadDashboard();
@@ -173,7 +171,7 @@ export default function SuperAdminDashboard() {
       const response = await fetch(`${API_BASE_URL}/api/v1/admin/superadmin/events/${eventId}/admin`, {
 		credentials: "include",
         method: "PUT",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${getAdminToken()}` },
+    		headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ assignedAdminId: assignedAdminId || null }),
       });
       if (!response.ok) throw new Error(await response.text());

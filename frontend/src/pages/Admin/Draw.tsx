@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { getAdminProfile, getAdminToken, logout, type AdminProfile } from "../../api/authApi";
+import { getAdminProfile, logout, type AdminProfile } from "../../api/authApi";
 import { getEvent } from "../../api/eventApi";
 import ResultDialog from "../../components/ResultDialog";
 import PublicFooter from "../../components/PublicFooter";
@@ -68,7 +68,6 @@ function Draw() {
       ...options,
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${getAdminToken()}`,
         ...options.headers,
       },
     });

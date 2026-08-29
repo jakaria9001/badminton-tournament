@@ -46,7 +46,7 @@ export default function PublicHeader({ tournamentName, adminActions }: PublicHea
           </span>
           <div>
             <div className="text-lg font-bold tracking-tight text-white">ShuttleHub</div>
-            <div className="text-[10px] uppercase tracking-[0.22em] text-slate-400">Men's Doubles</div>
+            <div className="text-[10px] uppercase tracking-[0.22em] text-slate-400">Tournaments</div>
           </div>
         </Link>
 

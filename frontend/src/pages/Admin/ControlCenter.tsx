@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getAdminProfile, getAdminToken, logout, type AdminProfile } from "../../api/authApi";
+import { getAdminProfile, logout, type AdminProfile } from "../../api/authApi";
 import { getEvent } from "../../api/eventApi";
 import PublicFooter from "../../components/PublicFooter";
 import PublicHeader from "../../components/PublicHeader";
@@ -45,9 +45,6 @@ export default function ControlCenter() {
   const request = useCallback(async (url: string) => {
     const response = await fetch(`${API_BASE_URL}${url}`, {
 		credentials: "include",
-      headers: {
-        Authorization: `Bearer ${getAdminToken()}`,
-      },
     });
 
     if (response.status === 401 || response.status === 403) {

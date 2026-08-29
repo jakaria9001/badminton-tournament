@@ -316,6 +316,53 @@ func (r *MatchRepository) GetTeamsForRound(
 	)
 }
 
+func (r *MatchRepository) GetTeamsForRoundTx(
+	ctx context.Context,
+	tx pgx.Tx,
+	roundID uuid.UUID,
+) ([]model.TeamSummary, error) {
+
+	var roundNumber int
+	var eventID uuid.UUID
+
+	err := tx.QueryRow(
+		ctx,
+		`
+		SELECT
+			round_number,
+			event_id
+		FROM tournament_rounds
+		WHERE id = $1
+		`,
+		roundID,
+	).Scan(
+		&roundNumber,
+		&eventID,
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf(
+			"get round: %w",
+			err,
+		)
+	}
+
+	if roundNumber == 1 {
+		return r.getConfirmedTeamsTx(
+			ctx,
+			tx,
+			eventID,
+		)
+	}
+
+	return r.getPreviousRoundWinnersTx(
+		ctx,
+		tx,
+		eventID,
+		roundNumber,
+	)
+}
+
 func (r *MatchRepository) getConfirmedTeams(
 	ctx context.Context,
 	eventID uuid.UUID,
@@ -388,28 +435,221 @@ func (r *MatchRepository) getPreviousRoundWinners(
 	rows, err := r.db.Query(
 		ctx,
 		`
+		SELECT id, team_name, player1, player2 FROM (
+			SELECT
+				t.id AS id,
+				COALESCE(t.team_name, '') AS team_name,
+				p1.name AS player1,
+				p2.name AS player2,
+				m.match_number AS sort_order
+			FROM matches m
+			JOIN teams t
+				ON t.id = m.winner_team_id
+			JOIN players p1
+				ON p1.id = t.player1_id
+			JOIN players p2
+				ON p2.id = t.player2_id
+			WHERE m.event_id = $1
+			  AND m.round = (
+			      SELECT round_name
+			      FROM tournament_rounds
+			      WHERE event_id = $1
+			        AND round_number = $2 - 1
+			  )
+			  AND m.status = 'COMPLETED'
+			  AND m.winner_team_id IS NOT NULL
+
+			UNION ALL
+
+			-- teams that skipped the previous round on a bye also advance
+			SELECT
+				t.id AS id,
+				COALESCE(t.team_name, '') AS team_name,
+				p1.name AS player1,
+				p2.name AS player2,
+				2147483647 AS sort_order
+			FROM round_advancements ra
+			JOIN teams t
+				ON t.id = ra.team_id
+			JOIN players p1
+				ON p1.id = t.player1_id
+			JOIN players p2
+				ON p2.id = t.player2_id
+			WHERE ra.advancement_type = 'BYE'
+			  AND ra.round_id = (
+			      SELECT id
+			      FROM tournament_rounds
+			      WHERE event_id = $1
+			        AND round_number = $2 - 1
+			  )
+		) combined
+		ORDER BY sort_order
+		`,
+		eventID,
+		roundNumber,
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf(
+			"get previous round winners: %w",
+			err,
+		)
+	}
+
+	defer rows.Close()
+
+	teams := make([]model.TeamSummary, 0)
+
+	for rows.Next() {
+
+		var team model.TeamSummary
+
+		err := rows.Scan(
+			&team.ID,
+			&team.TeamName,
+			&team.Player1,
+			&team.Player2,
+		)
+
+		if err != nil {
+			return nil, fmt.Errorf(
+				"scan winner: %w",
+				err,
+			)
+		}
+
+		teams = append(
+			teams,
+			team,
+		)
+	}
+
+	return teams, rows.Err()
+}
+
+func (r *MatchRepository) getConfirmedTeamsTx(
+	ctx context.Context,
+	tx pgx.Tx,
+	eventID uuid.UUID,
+) ([]model.TeamSummary, error) {
+
+	rows, err := tx.Query(
+		ctx,
+		`
 		SELECT
 			t.id,
 			COALESCE(t.team_name, ''),
 			p1.name,
 			p2.name
-		FROM matches m
-		JOIN teams t
-			ON t.id = m.winner_team_id
+		FROM teams t
 		JOIN players p1
 			ON p1.id = t.player1_id
 		JOIN players p2
 			ON p2.id = t.player2_id
-		WHERE m.event_id = $1
-		  AND m.round = (
-		      SELECT round_name
-		      FROM tournament_rounds
-		      WHERE event_id = $1
-		        AND round_number = $2 - 1
-		  )
-		  AND m.status = 'COMPLETED'
-		  AND m.winner_team_id IS NOT NULL
-		ORDER BY m.match_number
+		WHERE t.event_id = $1
+		  AND t.status = 'CONFIRMED'
+		ORDER BY t.created_at
+		`,
+		eventID,
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf(
+			"get confirmed teams: %w",
+			err,
+		)
+	}
+
+	defer rows.Close()
+
+	teams := make([]model.TeamSummary, 0)
+
+	for rows.Next() {
+
+		var team model.TeamSummary
+
+		err := rows.Scan(
+			&team.ID,
+			&team.TeamName,
+			&team.Player1,
+			&team.Player2,
+		)
+
+		if err != nil {
+			return nil, fmt.Errorf(
+				"scan team: %w",
+				err,
+			)
+		}
+
+		teams = append(
+			teams,
+			team,
+		)
+	}
+
+	return teams, rows.Err()
+}
+
+func (r *MatchRepository) getPreviousRoundWinnersTx(
+	ctx context.Context,
+	tx pgx.Tx,
+	eventID uuid.UUID,
+	roundNumber int,
+) ([]model.TeamSummary, error) {
+
+	rows, err := tx.Query(
+		ctx,
+		`
+		SELECT id, team_name, player1, player2 FROM (
+			SELECT
+				t.id AS id,
+				COALESCE(t.team_name, '') AS team_name,
+				p1.name AS player1,
+				p2.name AS player2,
+				m.match_number AS sort_order
+			FROM matches m
+			JOIN teams t
+				ON t.id = m.winner_team_id
+			JOIN players p1
+				ON p1.id = t.player1_id
+			JOIN players p2
+				ON p2.id = t.player2_id
+			WHERE m.event_id = $1
+			  AND m.round = (
+			      SELECT round_name
+			      FROM tournament_rounds
+			      WHERE event_id = $1
+			        AND round_number = $2 - 1
+			  )
+			  AND m.status = 'COMPLETED'
+			  AND m.winner_team_id IS NOT NULL
+
+			UNION ALL
+
+			-- teams that skipped the previous round on a bye also advance
+			SELECT
+				t.id AS id,
+				COALESCE(t.team_name, '') AS team_name,
+				p1.name AS player1,
+				p2.name AS player2,
+				2147483647 AS sort_order
+			FROM round_advancements ra
+			JOIN teams t
+				ON t.id = ra.team_id
+			JOIN players p1
+				ON p1.id = t.player1_id
+			JOIN players p2
+				ON p2.id = t.player2_id
+			WHERE ra.advancement_type = 'BYE'
+			  AND ra.round_id = (
+			      SELECT id
+			      FROM tournament_rounds
+			      WHERE event_id = $1
+			        AND round_number = $2 - 1
+			  )
+		) combined
+		ORDER BY sort_order
 		`,
 		eventID,
 		roundNumber,

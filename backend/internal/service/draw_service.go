@@ -89,8 +89,9 @@ func (s *DrawService) Generate(
 	}
 
 	teams, err :=
-		s.matchRepository.GetTeamsForRound(
+		s.matchRepository.GetTeamsForRoundTx(
 			ctx,
+			tx,
 			roundID,
 		)
 

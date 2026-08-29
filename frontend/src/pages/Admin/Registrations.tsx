@@ -3,7 +3,6 @@ import { useNavigate, useParams } from "react-router-dom";
 import { getEvent } from "../../api/eventApi";
 import {
     getAdminProfile,
-    getAdminToken,
     logout,
     type AdminProfile,
 } from "../../api/authApi";
@@ -77,9 +76,6 @@ function Registrations() {
                 `${API_BASE_URL}/api/v1/admin/events/${eventId}/registrations`,
                 {
 					credentials: "include",
-                    headers: {
-                    Authorization: `Bearer ${getAdminToken()}`,
-                    },
                 },
             );
 
@@ -143,10 +139,7 @@ function Registrations() {
             {
 				credentials: "include",
                 method: "PUT",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${getAdminToken()}`,
-                },
+				headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ status: nextStatus }),
             },
         );
@@ -171,10 +164,7 @@ function Registrations() {
         {
 			credentials: "include",
             method: "PUT",
-            headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${getAdminToken()}`,
-            },
+			headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
             status,
             }),
@@ -208,9 +198,6 @@ function Registrations() {
             {
 				credentials: "include",
                 method: "PUT",
-                headers: {
-                    Authorization: `Bearer ${getAdminToken()}`,
-                },
             },
         );
 

@@ -1,5 +1,4 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-const SESSION_MARKER_KEY = "badminton_admin_session";
 
 export async function login(
   email: string,
@@ -20,19 +19,14 @@ export async function login(
   if (!response.ok) {
     throw new Error(await response.text());
   }
-  sessionStorage.setItem(SESSION_MARKER_KEY, "active");
-}
-
-export function getAdminToken(): string | null {
-  return null;
-}
-
-export function hasAdminSession(): boolean {
-  return sessionStorage.getItem(SESSION_MARKER_KEY) === "active";
 }
 
 export function logout(): void {
-	 sessionStorage.removeItem(SESSION_MARKER_KEY);
+  void fetch(`${API_BASE_URL}/api/v1/auth/logout`, {
+    method: "POST",
+    credentials: "include",
+    keepalive: true,
+  });
 }
 
 export interface AdminProfile {
@@ -48,9 +42,6 @@ export async function getAdminProfile(): Promise<AdminProfile> {
     `${API_BASE_URL}/api/v1/admin/me`,
     {
       credentials: "include",
-      headers: {
-        Authorization: `Bearer ${getAdminToken()}`,
-      },
     },
   );
 

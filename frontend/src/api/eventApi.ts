@@ -1,5 +1,4 @@
 import type { EventInfo } from "../types/event";
-import { getAdminToken } from "./authApi";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL;
@@ -32,7 +31,6 @@ export async function listEvents(): Promise<EventInfo[]> {
 export async function listAdminEvents(): Promise<EventInfo[]> {
   const response = await fetch(`${API_BASE_URL}/api/v1/admin/superadmin/events`, {
 	credentials: "include",
-    headers: { Authorization: `Bearer ${getAdminToken()}` },
   });
 
   if (!response.ok) {

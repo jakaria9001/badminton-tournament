@@ -29,6 +29,10 @@ func NewRouter(
 	if allowedOrigins[0] == "" {
 		allowedOrigins = []string{"http://localhost:5173"}
 	}
+	trustedOrigins := make(map[string]struct{}, len(allowedOrigins))
+	for _, origin := range allowedOrigins {
+		trustedOrigins[origin] = struct{}{}
+	}
 
 	r := chi.NewRouter()
 	loginLimiter := middleware.NewRateLimiter(
@@ -94,12 +98,15 @@ func NewRouter(
 			"/auth/login",
 			authHandler.Login,
 		)
+
+		r.Post("/auth/logout", authHandler.Logout)
 	})
 
 	r.Route("/api/v1/admin", func(r chi.Router) {
 
 		r.Use(
 			middleware.RequireAuth(db, jwtSecret),
+			middleware.RequireTrustedOrigin(trustedOrigins),
 		)
 
 		r.Route("/superadmin", func(r chi.Router) {

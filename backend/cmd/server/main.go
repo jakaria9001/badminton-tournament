@@ -36,6 +36,9 @@ func main() {
 	if jwtSecret == "" {
 		log.Fatal("JWT_SECRET is not set")
 	}
+	if os.Getenv("APP_ENV") == "production" && os.Getenv("COOKIE_SECURE") != "true" {
+		log.Fatal("COOKIE_SECURE must be true in production")
+	}
 
 	// Database
 	db, err := database.NewPostgresPool(
