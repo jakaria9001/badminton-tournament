@@ -17,3 +17,25 @@ export async function getEvent(
 
   return response.json();
 }
+
+export async function listEvents(): Promise<EventInfo[]> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/events`);
+
+  if (!response.ok) {
+    throw new Error("Failed to load events");
+  }
+
+  return response.json();
+}
+
+export async function listAdminEvents(): Promise<EventInfo[]> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/admin/superadmin/events`, {
+	credentials: "include",
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to load events");
+  }
+
+  return response.json();
+}

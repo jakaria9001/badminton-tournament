@@ -1,0 +1,2 @@
+ALTER TABLE users
+    ADD COLUMN event_id UUID NULL REFERENCES events(id) ON DELETE SET NULL;

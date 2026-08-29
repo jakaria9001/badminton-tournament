@@ -14,6 +14,7 @@ type User struct {
 	Email        string
 	PasswordHash string
 	Role         string
+	EventID      uuid.NullUUID
 }
 
 type UserRepository struct {
@@ -42,7 +43,8 @@ func (r *UserRepository) GetByEmail(
 			name,
 			email,
 			password_hash,
-			role
+			role,
+			event_id
 		 FROM users
 		 WHERE email = $1`,
 		email,
@@ -52,6 +54,7 @@ func (r *UserRepository) GetByEmail(
 		&user.Email,
 		&user.PasswordHash,
 		&user.Role,
+		&user.EventID,
 	)
 
 	if err != nil {
@@ -71,7 +74,7 @@ func (r *UserRepository) GetByID(
 	var user User
 
 	err := r.db.QueryRow(ctx, `
-        SELECT id, name, email, password_hash, role
+        SELECT id, name, email, password_hash, role, event_id
         FROM users
         WHERE id = $1
     `, userID).Scan(
@@ -80,6 +83,7 @@ func (r *UserRepository) GetByID(
 		&user.Email,
 		&user.PasswordHash,
 		&user.Role,
+		&user.EventID,
 	)
 
 	if err != nil {
@@ -87,4 +91,47 @@ func (r *UserRepository) GetByID(
 	}
 
 	return &user, nil
+}
+
+func (r *UserRepository) CreateAdmin(
+	ctx context.Context,
+	name string,
+	email string,
+	passwordHash string,
+	role string,
+	eventID *uuid.UUID,
+) error {
+	_, err := r.db.Exec(ctx, `
+		INSERT INTO users (id, name, email, password_hash, role, event_id)
+		VALUES ($1, $2, $3, $4, $5, $6)
+	`, uuid.New(), name, email, passwordHash, role, eventID)
+	return err
+}
+
+func (r *UserRepository) ListAdmins(
+	ctx context.Context,
+) ([]User, error) {
+	rows, err := r.db.Query(ctx, `
+		SELECT id, name, email, password_hash, role, event_id
+		FROM users
+		WHERE role IN ('ADMIN', 'SUPER_ADMIN')
+		ORDER BY name ASC
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("list admins: %w", err)
+	}
+	defer rows.Close()
+
+	admins := make([]User, 0)
+	for rows.Next() {
+		var user User
+		if err := rows.Scan(&user.ID, &user.Name, &user.Email, &user.PasswordHash, &user.Role, &user.EventID); err != nil {
+			return nil, fmt.Errorf("scan admin: %w", err)
+		}
+		admins = append(admins, user)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate admins: %w", err)
+	}
+	return admins, nil
 }

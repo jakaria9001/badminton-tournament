@@ -1,13 +1,14 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
-import { login } from "../../api/authApi";
+import { getAdminProfile, login } from "../../api/authApi";
 import PublicFooter from "../../components/PublicFooter";
 import PublicHeader from "../../components/PublicHeader";
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -20,7 +21,12 @@ export default function Login() {
 
     try {
       await login(email, password);
-      navigate("/admin/registrations", { replace: true });
+      const profile = await getAdminProfile();
+      const requestedPath = (location.state as { from?: string } | null)?.from;
+      const destination = profile.role === "SUPER_ADMIN"
+        ? requestedPath === "/admin/superadmin" ? requestedPath : "/admin/superadmin"
+        : "/admin";
+      navigate(destination, { replace: true });
     } catch (loginError) {
       setError(
         loginError instanceof Error

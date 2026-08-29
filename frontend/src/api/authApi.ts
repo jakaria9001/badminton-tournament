@@ -1,11 +1,5 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-const TOKEN_KEY = "badminton_admin_token";
-
-interface LoginResponse {
-  token: string;
-}
-
 export async function login(
   email: string,
   password: string,
@@ -17,6 +11,7 @@ export async function login(
       headers: {
         "Content-Type": "application/json",
       },
+      credentials: "include",
       body: JSON.stringify({ email, password }),
     },
   );
@@ -24,17 +19,14 @@ export async function login(
   if (!response.ok) {
     throw new Error(await response.text());
   }
-
-  const data: LoginResponse = await response.json();
-  localStorage.setItem(TOKEN_KEY, data.token);
-}
-
-export function getAdminToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY);
 }
 
 export function logout(): void {
-  localStorage.removeItem(TOKEN_KEY);
+  void fetch(`${API_BASE_URL}/api/v1/auth/logout`, {
+    method: "POST",
+    credentials: "include",
+    keepalive: true,
+  });
 }
 
 export interface AdminProfile {
@@ -42,15 +34,14 @@ export interface AdminProfile {
   name: string;
   email: string;
   role: string;
+  eventId?: string;
 }
 
 export async function getAdminProfile(): Promise<AdminProfile> {
   const response = await fetch(
     `${API_BASE_URL}/api/v1/admin/me`,
     {
-      headers: {
-        Authorization: `Bearer ${getAdminToken()}`,
-      },
+      credentials: "include",
     },
   );
 

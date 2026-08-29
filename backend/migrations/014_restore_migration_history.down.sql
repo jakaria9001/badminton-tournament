@@ -1,0 +1,1 @@
+-- Version 14 was already applied in existing databases.

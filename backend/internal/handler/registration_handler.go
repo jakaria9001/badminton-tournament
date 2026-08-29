@@ -42,12 +42,7 @@ func (h *RegistrationHandler) Create(
 
 	var req model.RegistrationRequest
 
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(
-			w,
-			"invalid request body",
-			http.StatusBadRequest,
-		)
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -206,14 +201,7 @@ func (h *RegistrationHandler) UpdateStatus(
 
 	var req model.UpdateRegistrationStatusRequest
 
-	if err := json.NewDecoder(
-		r.Body,
-	).Decode(&req); err != nil {
-		http.Error(
-			w,
-			"invalid request body",
-			http.StatusBadRequest,
-		)
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 

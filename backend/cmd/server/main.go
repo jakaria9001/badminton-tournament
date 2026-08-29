@@ -2,12 +2,15 @@ package main
 
 import (
 	"context"
+	"errors"
 	"github.com/joho/godotenv"
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/jakaria9001/badminton-tournament/backend/internal/database"
+	"github.com/jakaria9001/badminton-tournament/backend/internal/draw"
 	"github.com/jakaria9001/badminton-tournament/backend/internal/handler"
 	"github.com/jakaria9001/badminton-tournament/backend/internal/repository"
 	"github.com/jakaria9001/badminton-tournament/backend/internal/router"
@@ -33,6 +36,9 @@ func main() {
 	if jwtSecret == "" {
 		log.Fatal("JWT_SECRET is not set")
 	}
+	if os.Getenv("APP_ENV") == "production" && os.Getenv("COOKIE_SECURE") != "true" {
+		log.Fatal("COOKIE_SECURE must be true in production")
+	}
 
 	// Database
 	db, err := database.NewPostgresPool(
@@ -48,6 +54,10 @@ func main() {
 
 	log.Println("Connected to PostgreSQL")
 
+	// generator
+	generator :=
+		draw.NewGenerator()
+
 	// Repository
 	registrationRepository :=
 		repository.NewRegistrationRepository(db)
@@ -57,6 +67,15 @@ func main() {
 
 	userRepository :=
 		repository.NewUserRepository(db)
+
+	matchRepository :=
+		repository.NewMatchRepository(db)
+
+	roundRepository :=
+		repository.NewRoundRepository(db)
+
+	advancementRepository :=
+		repository.NewAdvancementRepository(db)
 
 	// Service
 	registrationService :=
@@ -76,6 +95,33 @@ func main() {
 			jwtSecret,
 		)
 
+	matchService :=
+		service.NewMatchService(
+			matchRepository,
+			roundRepository,
+		)
+
+	roundService :=
+		service.NewRoundService(
+			roundRepository,
+			matchRepository,
+		)
+
+	resultService :=
+		service.NewResultService(
+			db,
+			matchRepository,
+		)
+
+	drawService :=
+		service.NewDrawService(
+			db,
+			roundRepository,
+			matchRepository,
+			advancementRepository,
+			generator,
+		)
+
 	// Handler
 	registrationHandler :=
 		handler.NewRegistrationHandler(
@@ -92,11 +138,31 @@ func main() {
 			authService,
 		)
 
+	matchHandler :=
+		handler.NewMatchHandler(
+			matchService,
+		)
+
+	roundHandler :=
+		handler.NewRoundHandler(
+			roundService,
+			drawService,
+		)
+
+	resultHandler :=
+		handler.NewResultHandler(
+			resultService,
+		)
+
 	// Router
 	r := router.NewRouter(
+		db,
 		registrationHandler,
 		eventHandler,
 		authHandler,
+		matchHandler,
+		roundHandler,
+		resultHandler,
 		jwtSecret,
 	)
 
@@ -111,10 +177,17 @@ func main() {
 		port,
 	)
 
-	if err := http.ListenAndServe(
-		":"+port,
-		r,
-	); err != nil {
+	server := &http.Server{
+		Addr:              ":" + port,
+		Handler:           r,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       60 * time.Second,
+		MaxHeaderBytes:    1 << 20,
+	}
+
+	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Fatal(err)
 	}
 }

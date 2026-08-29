@@ -104,19 +104,13 @@ func (s *RegistrationService) UpdateStatus(
 	status string,
 ) error {
 
-	switch status {
-	case "CONFIRMED",
-		"REJECTED",
-		"WITHDRAWN":
-		// valid
-
-	default:
+	if status != "CONFIRMED" && status != "REJECTED" && status != "WITHDRAWN" {
 		return fmt.Errorf(
 			"invalid registration status",
 		)
 	}
 
-	return s.repository.UpdateStatus(
+	return s.repository.TransitionStatus(
 		ctx,
 		registrationID,
 		status,
@@ -127,9 +121,20 @@ func (s *RegistrationService) WithdrawRegistration(
 	ctx context.Context,
 	registrationID uuid.UUID,
 ) error {
-	return s.repository.UpdateStatus(
+	return s.repository.TransitionStatus(
 		ctx,
 		registrationID,
 		"WITHDRAWN",
 	)
+}
+
+func ValidRegistrationTransition(current, next string) bool {
+	switch current {
+	case "PENDING":
+		return next == "CONFIRMED" || next == "REJECTED" || next == "WITHDRAWN"
+	case "CONFIRMED":
+		return next == "WITHDRAWN"
+	default:
+		return false
+	}
 }

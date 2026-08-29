@@ -3,6 +3,8 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
+	"os"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -30,16 +32,7 @@ func (h *AuthHandler) Login(
 
 	var req model.LoginRequest
 
-	if err := json.NewDecoder(
-		r.Body,
-	).Decode(&req); err != nil {
-
-		http.Error(
-			w,
-			"invalid request body",
-			http.StatusBadRequest,
-		)
-
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -59,16 +52,25 @@ func (h *AuthHandler) Login(
 		return
 	}
 
-	response := model.LoginResponse{
-		Token: token,
-	}
+	http.SetCookie(w, &http.Cookie{
+		Name: "shuttlehub_session", Value: token, Path: "/", HttpOnly: true,
+		Secure: secureSessionCookie(), SameSite: http.SameSiteLaxMode,
+		MaxAge: int((24 * time.Hour).Seconds()),
+	})
+	w.WriteHeader(http.StatusNoContent)
+}
 
-	w.Header().Set(
-		"Content-Type",
-		"application/json",
-	)
+func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
+	http.SetCookie(w, &http.Cookie{
+		Name: "shuttlehub_session", Value: "", Path: "/", HttpOnly: true,
+		Secure: secureSessionCookie(), SameSite: http.SameSiteLaxMode,
+		MaxAge: -1, Expires: time.Unix(0, 0),
+	})
+	w.WriteHeader(http.StatusNoContent)
+}
 
-	json.NewEncoder(w).Encode(response)
+func secureSessionCookie() bool {
+	return os.Getenv("COOKIE_SECURE") == "true"
 }
 
 func (h *AuthHandler) Me(
@@ -102,4 +104,37 @@ func (h *AuthHandler) Me(
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(profile)
+}
+
+func (h *AuthHandler) CreateAdmin(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	var req model.CreateAdminRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+
+	if err := h.service.CreateAdmin(r.Context(), req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]string{"status": "created"})
+}
+
+func (h *AuthHandler) ListAdmins(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	admins, err := h.service.ListAdmins(r.Context())
+	if err != nil {
+		http.Error(w, "failed to list admins", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(admins)
 }

@@ -1,16 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
+import { getEvent } from "../../api/eventApi";
 import {
     getAdminProfile,
-    getAdminToken,
     logout,
     type AdminProfile,
 } from "../../api/authApi";
 import PublicFooter from "../../components/PublicFooter";
 import PublicHeader from "../../components/PublicHeader";
-
-const EVENT_ID =
-  "00000000-0000-0000-0000-000000000002";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL;
@@ -30,6 +27,7 @@ interface Registration {
 function Registrations() {
 
     const navigate = useNavigate();
+    const { eventId: routeEventId } = useParams();
 
     const handleUnauthorized = useCallback(() => {
         logout();
@@ -44,6 +42,11 @@ function Registrations() {
 
     const [profile, setProfile] =
         useState<AdminProfile | null>(null);
+
+    const [registrationStatus, setRegistrationStatus] =
+        useState("REGISTRATION_CLOSED");
+    const [tournamentName, setTournamentName] = useState("");
+    const eventId = routeEventId ?? profile?.eventId ?? "";
 
     const sortedRegistrations = [...registrations].sort((a, b) => {
         const priority: Record<string, number> = {
@@ -63,13 +66,16 @@ function Registrations() {
     };
 
     const loadRegistrations = useCallback(async () => {
+        if (!eventId) {
+            setLoading(false);
+            return;
+        }
+
         try {
             const response = await fetch(
-                `${API_BASE_URL}/api/v1/admin/events/${EVENT_ID}/registrations`,
+                `${API_BASE_URL}/api/v1/admin/events/${eventId}/registrations`,
                 {
-                    headers: {
-                    Authorization: `Bearer ${getAdminToken()}`,
-                    },
+					credentials: "include",
                 },
             );
 
@@ -90,7 +96,7 @@ function Registrations() {
         } finally {
             setLoading(false);
         }
-    }, [handleUnauthorized]);
+    }, [eventId, handleUnauthorized]);
 
     useEffect(() => {
         async function loadProfile() {
@@ -103,11 +109,51 @@ function Registrations() {
         }
 
         void loadProfile();
-    }, [handleUnauthorized]);
+    }, [handleUnauthorized, navigate]);
 
     useEffect(() => {
         void loadRegistrations();
-    }, [loadRegistrations]);
+    }, [eventId, loadRegistrations]);
+
+    useEffect(() => {
+        if (!eventId) {
+            return;
+        }
+
+        void getEvent(eventId).then((event) => {
+            setRegistrationStatus(event.status);
+            setTournamentName(event.name);
+        }).catch(() => undefined);
+    }, [eventId]);
+
+    async function toggleRegistrationStatus() {
+        const nextStatus = registrationStatus === "REGISTRATION_OPEN"
+            ? "REGISTRATION_CLOSED"
+            : "REGISTRATION_OPEN";
+        if (!eventId) {
+            return;
+        }
+
+        const response = await fetch(
+            `${API_BASE_URL}/api/v1/admin/events/${eventId}/registration-status`,
+            {
+				credentials: "include",
+                method: "PUT",
+				headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status: nextStatus }),
+            },
+        );
+
+        if (response.status === 401 || response.status === 403) {
+            handleUnauthorized();
+            return;
+        }
+        if (!response.ok) {
+            alert(await response.text());
+            return;
+        }
+        setRegistrationStatus(nextStatus);
+    }
 
     async function updateStatus(
         registrationId: string,
@@ -116,11 +162,9 @@ function Registrations() {
         const response = await fetch(
         `${API_BASE_URL}/api/v1/admin/registrations/${registrationId}/status`,
         {
+			credentials: "include",
             method: "PUT",
-            headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${getAdminToken()}`,
-            },
+			headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
             status,
             }),
@@ -133,7 +177,7 @@ function Registrations() {
         }
         
         if (!response.ok) {
-            alert("Failed to update registration");
+            alert((await response.text()) || "Failed to update registration");
             return;
         }
 
@@ -152,10 +196,8 @@ function Registrations() {
         const response = await fetch(
             `${API_BASE_URL}/api/v1/admin/registrations/${registrationId}/withdraw`,
             {
+				credentials: "include",
                 method: "PUT",
-                headers: {
-                    Authorization: `Bearer ${getAdminToken()}`,
-                },
             },
         );
 
@@ -186,7 +228,41 @@ function Registrations() {
 
     return (
         <div className="flex min-h-screen flex-col bg-slate-100">
-            <PublicHeader />
+            <PublicHeader
+                tournamentName={tournamentName}
+                adminActions={(
+                    <>
+                        <button
+                            className={`rounded-lg px-4 py-2.5 text-left font-semibold transition ${registrationStatus === "REGISTRATION_OPEN" ? "border border-amber-400/40 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20" : "border border-emerald-400/40 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20"}`}
+                            onClick={() => void toggleRegistrationStatus()}
+                            type="button"
+                        >
+                            {registrationStatus === "REGISTRATION_OPEN" ? "Stop registrations" : "Open registrations"}
+                        </button>
+                        <button
+                            className="rounded-lg border border-white/20 bg-white/5 px-4 py-2.5 text-left font-semibold text-white transition hover:bg-white/10"
+                            onClick={() => navigate(`/admin/events/${eventId}/draw`)}
+                            type="button"
+                        >
+                            Draw
+                        </button>
+                        <button
+                            className="rounded-lg border border-white/20 bg-white/5 px-4 py-2.5 text-left font-semibold text-white transition hover:bg-white/10"
+                            onClick={() => void loadRegistrations()}
+                            type="button"
+                        >
+                            Refresh
+                        </button>
+                        <button
+                            className="rounded-lg border border-red-400/40 bg-red-500/10 px-4 py-2.5 text-left font-semibold text-red-200 transition hover:bg-red-500 hover:text-white"
+                            onClick={handleUnauthorized}
+                            type="button"
+                        >
+                            Sign out
+                        </button>
+                    </>
+                )}
+            />
             <main className="flex-1 px-4 py-8">
             <div className="mx-auto max-w-5xl">
                 <div className="mb-8 rounded-2xl bg-slate-900 p-6 text-white shadow-lg">
@@ -196,38 +272,10 @@ function Registrations() {
                                 Admin
                             </p>
                             <h1 className="mt-2 text-3xl font-bold">
-                                Men's Doubles Registrations
+                                Registrations
                             </h1>
                         </div>
 
-                        <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
-                            <div className="hidden text-right sm:block">
-                                <p className="text-sm font-semibold text-white">
-                                    {profile?.name ?? "Loading..."}
-                                </p>
-                                <p className="text-xs text-slate-300">
-                                    {profile?.role ?? ""}
-                                </p>
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                                <button
-                                    className="rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
-                                    onClick={() => void loadRegistrations()}
-                                    type="button"
-                                >
-                                    Refresh
-                                </button>
-
-                                <button
-                                    className="rounded-lg border border-red-400/40 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-200 transition hover:bg-red-500 hover:text-white"
-                                    onClick={handleUnauthorized}
-                                    type="button"
-                                >
-                                    Sign out
-                                </button>
-                            </div>
-                        </div>
                     </div>
                 </div>
 

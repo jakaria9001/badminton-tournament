@@ -1,295 +1,80 @@
 import { useEffect, useState } from "react";
-import { getEvent } from "../api/eventApi";
+import { listEvents } from "../api/eventApi";
 import type { EventInfo } from "../types/event";
 import PublicFooter from "../components/PublicFooter";
 import PublicHeader from "../components/PublicHeader";
 
-const EVENT_ID =
-  "00000000-0000-0000-0000-000000000002";
-
 function Home() {
-  const [event, setEvent] =
-    useState<EventInfo | null>(null);
-
-  const [loading, setLoading] =
-    useState(true);
-
-  const [error, setError] =
-    useState("");
+  const [events, setEvents] = useState<EventInfo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    async function loadEvent() {
-      try {
-        const data = await getEvent(EVENT_ID);
-        setEvent(data);
-      } catch (err) {
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Failed to load tournament",
-        );
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadEvent();
+    void listEvents()
+      .then(setEvents)
+      .catch((loadError: unknown) => {
+        setError(loadError instanceof Error ? loadError.message : "Failed to load events");
+      })
+      .finally(() => setLoading(false));
   }, []);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-950 text-white">
-        <PublicHeader />
-        <main className="flex min-h-[70vh] items-center justify-center px-5 text-center sm:px-8">
-          Loading tournament...
-        </main>
-        <PublicFooter />
-      </div>
-    );
-  }
-
-  if (error || !event) {
-    return (
-      <div className="min-h-screen bg-slate-950 text-white">
-        <PublicHeader />
-        <main className="flex min-h-[70vh] items-center justify-center px-4 text-center">
-          <div>
-            <p className="text-xl font-semibold">
-              Unable to load tournament
-            </p>
-
-            <p className="mt-2 text-slate-400">
-              {error}
-            </p>
-          </div>
-        </main>
-        <PublicFooter />
-      </div>
-    );
-  }
-
-  const isOpen =
-    event.status === "REGISTRATION_OPEN";
-
-  const capacityText =
-    event.maxTeams !== null
-      ? `${event.registeredTeams} / ${event.maxTeams}`
-      : `${event.registeredTeams}`;
-
-  const percentage =
-    event.maxTeams
-      ? Math.min(
-          100,
-          (event.registeredTeams /
-            event.maxTeams) *
-            100,
-        )
-      : 0;
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <PublicHeader />
-
-      <section className="px-5 pb-16 pt-10 sm:px-8">
-        <div className="mx-auto max-w-6xl">
-          <div className="overflow-hidden rounded-[32px] border border-slate-800 bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 shadow-2xl shadow-slate-950/40">
-            <div className="grid gap-8 px-6 py-8 md:grid-cols-[1.2fr_0.8fr] md:px-10 md:py-10">
-              <div className="flex flex-col justify-center">
-                <div className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-amber-400/30 bg-amber-500/10 px-4 py-2 text-sm font-medium text-amber-200">
-                  <span>🏸</span>
-                  2026 Tournament Series
-                </div>
-
-                <h1 className="text-4xl font-black tracking-tight sm:text-5xl lg:text-7xl">
-                  <a href="/" className="transition hover:text-slate-300">ShuttleHub</a>
-                  <span className="mt-2 block text-slate-400">
-                    Men's Doubles 2026
-                  </span>
-                </h1>
-
-                <p className="mt-5 max-w-xl text-base leading-8 text-slate-300 sm:text-lg">
-                  A competitive, club-style badminton experience built for strong matchups, team spirit, and a polished tournament day.
-                </p>
-
-                <div className="mt-8 flex flex-wrap gap-3">
-                  {isOpen && (
-                    <button
-                      className="rounded-xl bg-white px-6 py-3 font-bold text-slate-950 transition hover:bg-slate-200"
-                      onClick={() => {
-                        window.location.href = "/register";
-                      }}
-                    >
-                      Register Your Team
-                    </button>
-                  )}
-
-                  <button
-                    className="rounded-xl border border-slate-700 bg-slate-800 px-6 py-3 font-semibold text-white transition hover:bg-slate-700"
-                    onClick={() => {
-                      window.location.href = "/teams";
-                    }}
-                  >
-                    View Teams
-                  </button>
-                </div>
-
-                <div className="mt-8 flex flex-wrap gap-4 text-sm text-slate-300">
-                  <div className="rounded-full border border-slate-700 bg-slate-800 px-3 py-2">
-                    1-night showdown
-                  </div>
-                  <div className="rounded-full border border-slate-700 bg-slate-800 px-3 py-2">
-                    Competitive spirit
-                  </div>
-                  <div className="rounded-full border border-slate-700 bg-slate-800 px-3 py-2">
-                    Elite club experience
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-center">
-                <div className="w-full max-w-md rounded-[28px] border border-slate-800 bg-slate-950 p-5 shadow-xl shadow-slate-950/30">
-                  <div className="mb-6 flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-slate-400">Event</p>
-                      <h2 className="mt-1 text-2xl font-bold text-white">{event.name}</h2>
-                    </div>
-                    <div className="rounded-full border border-emerald-700 bg-emerald-950/70 px-3 py-1 text-sm font-semibold text-emerald-300">
-                      {isOpen ? "Open" : "Closed"}
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <InfoCard label="Venue" value="Elite Shuttler Club" />
-                    <InfoCard label="Category" value="Men's Doubles" />
-                    <InfoCard label="Teams" value={capacityText} />
-                  </div>
-
-                  <div className="mt-5 rounded-2xl border border-slate-800 bg-slate-900 p-4">
-                    <div className="flex items-center justify-between text-sm text-slate-300">
-                      <span>Capacity</span>
-                      <span>{event.maxTeams !== null ? `${Math.min(100, Math.round(percentage))}%` : "N/A"}</span>
-                    </div>
-                    {event.maxTeams !== null && (
-                      <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-slate-800">
-                        <div
-                          className="h-full rounded-full bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 transition-all"
-                          style={{ width: `${percentage}%` }}
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
+      <main>
+        <section className="border-b border-white/10 px-5 pb-16 pt-14 sm:px-8 sm:pt-20">
+          <div className="mx-auto max-w-6xl">
+            <div className="max-w-3xl">
+              <p className="text-sm font-bold uppercase tracking-[0.2em] text-amber-300">ShuttleHub tournament platform</p>
+              <h1 className="mt-5 text-4xl font-black tracking-tight sm:text-6xl">Every match, clearly organized.</h1>
+              <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-300">Discover upcoming competitions, register teams, follow live scores, and keep every round moving from first draw to final point.</p>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <a className="rounded-xl bg-amber-400 px-5 py-3 font-bold text-slate-950 transition hover:bg-amber-300" href="#events">Explore events</a>
+                <a className="rounded-xl border border-slate-700 bg-slate-900 px-5 py-3 font-semibold text-white transition hover:bg-slate-800" href="#benefits">Why ShuttleHub</a>
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="border-y border-white/10 bg-white/5 px-5 py-8">
-        <div className="mx-auto grid max-w-5xl gap-4 sm:grid-cols-3">
-          <InfoCard label="Event" value={event.name} />
-          <InfoCard label="Registration" value={isOpen ? "Open" : "Closed"} />
-          <InfoCard label="Teams" value={capacityText} />
-        </div>
-      </section>
-
-      <section className="px-5 py-12">
-        <div className="mx-auto max-w-5xl">
-          <div className="mb-6 text-center">
-            <p className="text-sm font-medium uppercase tracking-[0.2em] text-slate-400">
-              Tournament Snapshot
-            </p>
-            <h2 className="mt-3 text-3xl font-bold text-white">
-              Build momentum before the final whistle
-            </h2>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-3">
-            <FeatureCard
-              title="Fast registration"
-              description="Simple two-player sign-up with quick team submission and instant confirmation feedback."
-              icon="⚡"
-            />
-            <FeatureCard
-              title="Live standings"
-              description="Track the event as teams fill up and competitors rise through the bracket."
-              icon="📊"
-            />
-            <FeatureCard
-              title="Club atmosphere"
-              description="A competitive but welcoming environment designed for fun, skill, and community."
-              icon="🏆"
-            />
-          </div>
-        </div>
-      </section>
-
-      <section className="px-5 pb-12">
-        <div className="mx-auto max-w-5xl rounded-2xl border border-white/10 bg-white/5 p-6">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <p className="text-sm text-slate-400">Tournament capacity</p>
-              <p className="mt-1 text-xl font-bold text-white">
-                {capacityText} teams registered
-              </p>
-            </div>
-
-            <div className="flex items-center gap-3 rounded-full border border-white/10 bg-slate-950/60 px-3 py-2 text-sm text-slate-300">
-              <span className="text-xl">🏸</span>
-              {event.maxTeams !== null && event.maxTeams - event.registeredTeams > 0
-                ? `${event.maxTeams - event.registeredTeams} spots remaining`
-                : "Tournament full"}
-            </div>
-          </div>
-
-          {event.maxTeams !== null && (
-            <div className="mt-5">
-              <div className="h-2.5 overflow-hidden rounded-full bg-slate-800">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 transition-all"
-                  style={{ width: `${percentage}%` }}
-                />
+        <section className="bg-slate-100 px-5 py-12 text-slate-900 sm:px-8" id="events">
+          <div className="mx-auto max-w-6xl">
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <p className="text-sm font-bold uppercase tracking-[0.2em] text-slate-500">Tournament calendar</p>
+                <h2 className="mt-2 text-3xl font-black text-slate-950">Upcoming events</h2>
               </div>
+              <span className="text-sm font-semibold text-slate-500">{events.length} {events.length === 1 ? "event" : "events"}</span>
             </div>
-          )}
-        </div>
-      </section>
+            {loading && <p className="mt-6 rounded-2xl bg-white p-8 text-center text-slate-500 shadow-sm">Loading events...</p>}
+            {error && <p className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-900" role="alert">{error}</p>}
+            {!loading && !error && events.length === 0 && <p className="mt-6 rounded-2xl bg-white p-8 text-center text-slate-500 shadow-sm">No published events are available yet.</p>}
+            {!loading && !error && events.length > 0 && <div className="mt-6 grid gap-5 md:grid-cols-2 lg:grid-cols-3">{events.map((event) => <EventCard event={event} key={event.id} />)}</div>}
+          </div>
+        </section>
 
+        <section className="px-5 py-14 sm:px-8" id="benefits">
+          <div className="mx-auto max-w-6xl">
+            <div className="max-w-2xl"><p className="text-sm font-bold uppercase tracking-[0.2em] text-amber-300">Built for tournament day</p><h2 className="mt-3 text-3xl font-black">A smoother experience for players and organizers.</h2></div>
+            <div className="mt-8 grid gap-5 md:grid-cols-3"><Feature title="Simple registration" text="Collect complete team details in one focused flow, with capacity and registration status always visible." /><Feature title="Confident operations" text="Create draws, manage rounds, close registration, and enter results from one reliable admin workflow." /><Feature title="Clear live tracking" text="Give players and spectators a shared view of courts, schedules, scores, and tournament progress." /></div>
+          </div>
+        </section>
+      </main>
       <PublicFooter />
     </div>
   );
 }
 
-interface InfoCardProps {
-  label: string;
-  value: string;
+function EventCard({ event }: { event: EventInfo }) {
+  const open = event.status === "REGISTRATION_OPEN";
+  return <article className="flex flex-col rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"><div className="flex items-start justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">Men&apos;s Doubles</p><h3 className="mt-2 text-xl font-black text-slate-950">{event.name}</h3></div><span className={`rounded-full px-3 py-1 text-xs font-bold ${open ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}`}>{open ? "Registration open" : event.status.replaceAll("_", " ")}</span></div><div className="mt-6 grid grid-cols-2 gap-4 border-y border-slate-200 py-4"><Stat label="Teams" value={event.maxTeams === null ? `${event.registeredTeams}` : `${event.registeredTeams} / ${event.maxTeams}`} /><Stat label="Format" value="Doubles" /></div><div className="mt-auto flex flex-wrap gap-2 pt-5"><a className="rounded-lg bg-slate-950 px-3 py-2 text-sm font-bold text-white transition hover:bg-slate-800" href={`/events/${event.id}`}>View event</a>{open && <a className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50" href={`/events/${event.id}/register`}>Register</a>}</div></article>;
 }
 
-function InfoCard({ label, value }: InfoCardProps) {
-  return (
-    <div className="rounded-xl border border-white/10 bg-slate-950/80 p-5 shadow-lg shadow-slate-950/20">
-      <p className="text-sm text-slate-500">{label}</p>
-      <p className="mt-2 font-semibold text-white">{value}</p>
-    </div>
-  );
+function Stat({ label, value }: { label: string; value: string }) {
+  return <div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">{label}</p><p className="mt-1 font-bold text-slate-800">{value}</p></div>;
 }
 
-interface FeatureCardProps {
-  title: string;
-  description: string;
-  icon: string;
-}
-
-function FeatureCard({ title, description, icon }: FeatureCardProps) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-5 shadow-lg shadow-slate-950/20">
-      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/10 text-2xl">
-        {icon}
-      </div>
-      <h3 className="mt-4 text-xl font-bold text-white">{title}</h3>
-      <p className="mt-2 text-sm leading-6 text-slate-300">{description}</p>
-    </div>
-  );
+function Feature({ title, text }: { title: string; text: string }) {
+  return <article className="rounded-2xl border border-slate-800 bg-slate-900 p-6"><h3 className="text-lg font-bold">{title}</h3><p className="mt-3 text-sm leading-7 text-slate-300">{text}</p></article>;
 }
 
 export default Home;

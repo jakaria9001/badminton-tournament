@@ -498,3 +498,103 @@ func (r *RegistrationRepository) UpdateStatus(
 
 	return nil
 }
+
+func (r *RegistrationRepository) TransitionStatus(
+	ctx context.Context,
+	registrationID uuid.UUID,
+	nextStatus string,
+) error {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin registration transition: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var eventID, teamID uuid.UUID
+	var currentStatus string
+	err = tx.QueryRow(ctx, `
+		SELECT t.event_id, t.id, r.status
+		FROM registrations r
+		JOIN teams t ON t.id = r.team_id
+		WHERE r.id = $1
+		FOR UPDATE OF r, t
+	`, registrationID).Scan(&eventID, &teamID, &currentStatus)
+	if err == pgx.ErrNoRows {
+		return fmt.Errorf("registration not found")
+	}
+	if err != nil {
+		return fmt.Errorf("lock registration: %w", err)
+	}
+	if !validRegistrationTransition(currentStatus, nextStatus) {
+		return fmt.Errorf("cannot transition registration from %s to %s", currentStatus, nextStatus)
+	}
+
+	if nextStatus == "CONFIRMED" {
+		var maxTeams *int
+		err = tx.QueryRow(ctx, `
+			SELECT e.max_teams
+			FROM events e
+			WHERE e.id = $1
+			FOR UPDATE
+		`, eventID).Scan(&maxTeams)
+		if err != nil {
+			return fmt.Errorf("lock event capacity: %w", err)
+		}
+		if maxTeams != nil {
+			var confirmed int
+			if err := tx.QueryRow(ctx, `
+				SELECT COUNT(*) FROM teams WHERE event_id = $1 AND status = 'CONFIRMED'
+			`, eventID).Scan(&confirmed); err != nil {
+				return fmt.Errorf("count confirmed teams: %w", err)
+			}
+			if confirmed >= *maxTeams {
+				return model.ErrEventFull
+			}
+		}
+	}
+
+	if nextStatus == "WITHDRAWN" {
+		var usedInMatch bool
+		if err := tx.QueryRow(ctx, `
+			SELECT EXISTS (
+				SELECT 1 FROM matches
+				WHERE team1_id = $1 OR team2_id = $1 OR winner_team_id = $1 OR loser_team_id = $1
+			)
+		`, teamID).Scan(&usedInMatch); err != nil {
+			return fmt.Errorf("check team matches: %w", err)
+		}
+		if usedInMatch {
+			return fmt.Errorf("cannot withdraw a team after it has been added to a match")
+		}
+	}
+
+	_, err = tx.Exec(ctx, `
+		UPDATE registrations
+		SET status = $1::varchar, confirmed_at = CASE WHEN $1::varchar = 'CONFIRMED' THEN NOW() ELSE confirmed_at END
+		WHERE id = $2;
+	`, nextStatus, registrationID)
+	if err != nil {
+		return fmt.Errorf("update registration: %w", err)
+	}
+	_, err = tx.Exec(ctx, `
+		UPDATE teams SET status = $1::varchar, updated_at = NOW() WHERE id = $2
+	`, nextStatus, teamID)
+	if err != nil {
+		return fmt.Errorf("update team status: %w", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit registration transition: %w", err)
+	}
+	return nil
+}
+
+func validRegistrationTransition(current, next string) bool {
+	switch current {
+	case "PENDING":
+		return next == "CONFIRMED" || next == "REJECTED" || next == "WITHDRAWN"
+	case "CONFIRMED":
+		return next == "WITHDRAWN"
+	default:
+		return false
+	}
+}
