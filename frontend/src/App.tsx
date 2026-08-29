@@ -94,6 +94,15 @@ function App() {
         />
 
         <Route
+          path="/admin/events/:eventId/registrations"
+          element={
+            <ProtectedRoute>
+              <Registrations />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
           path="/admin/draw"
           element={
             <ProtectedRoute>

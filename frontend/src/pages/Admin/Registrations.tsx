@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { getEvent } from "../../api/eventApi";
 import {
     getAdminProfile,
@@ -28,6 +28,7 @@ interface Registration {
 function Registrations() {
 
     const navigate = useNavigate();
+    const { eventId: routeEventId } = useParams();
 
     const handleUnauthorized = useCallback(() => {
         logout();
@@ -45,7 +46,7 @@ function Registrations() {
 
     const [registrationStatus, setRegistrationStatus] =
         useState("REGISTRATION_CLOSED");
-    const eventId = profile?.eventId ?? "";
+    const eventId = routeEventId ?? profile?.eventId ?? "";
 
     const sortedRegistrations = [...registrations].sort((a, b) => {
         const priority: Record<string, number> = {
@@ -97,16 +98,12 @@ function Registrations() {
         } finally {
             setLoading(false);
         }
-    }, [handleUnauthorized]);
+    }, [eventId, handleUnauthorized]);
 
     useEffect(() => {
         async function loadProfile() {
             try {
             const adminProfile = await getAdminProfile();
-            if (adminProfile.role === "SUPER_ADMIN") {
-                navigate("/admin/superadmin", { replace: true });
-                return;
-            }
             setProfile(adminProfile);
             } catch {
             handleUnauthorized();
