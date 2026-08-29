@@ -111,6 +111,15 @@ function App() {
           }
         />
 
+        <Route
+          path="/admin/events/:eventId/draw"
+          element={
+            <ProtectedRoute>
+              <Draw />
+            </ProtectedRoute>
+          }
+        />
+
       </Routes>
     </BrowserRouter>
   );

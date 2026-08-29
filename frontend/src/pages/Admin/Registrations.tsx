@@ -46,6 +46,7 @@ function Registrations() {
 
     const [registrationStatus, setRegistrationStatus] =
         useState("REGISTRATION_CLOSED");
+    const [tournamentName, setTournamentName] = useState("");
     const eventId = routeEventId ?? profile?.eventId ?? "";
 
     const sortedRegistrations = [...registrations].sort((a, b) => {
@@ -75,6 +76,7 @@ function Registrations() {
             const response = await fetch(
                 `${API_BASE_URL}/api/v1/admin/events/${eventId}/registrations`,
                 {
+					credentials: "include",
                     headers: {
                     Authorization: `Bearer ${getAdminToken()}`,
                     },
@@ -124,6 +126,7 @@ function Registrations() {
 
         void getEvent(eventId).then((event) => {
             setRegistrationStatus(event.status);
+            setTournamentName(event.name);
         }).catch(() => undefined);
     }, [eventId]);
 
@@ -138,6 +141,7 @@ function Registrations() {
         const response = await fetch(
             `${API_BASE_URL}/api/v1/admin/events/${eventId}/registration-status`,
             {
+				credentials: "include",
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
@@ -165,6 +169,7 @@ function Registrations() {
         const response = await fetch(
         `${API_BASE_URL}/api/v1/admin/registrations/${registrationId}/status`,
         {
+			credentials: "include",
             method: "PUT",
             headers: {
             "Content-Type": "application/json",
@@ -182,7 +187,7 @@ function Registrations() {
         }
         
         if (!response.ok) {
-            alert("Failed to update registration");
+            alert((await response.text()) || "Failed to update registration");
             return;
         }
 
@@ -201,6 +206,7 @@ function Registrations() {
         const response = await fetch(
             `${API_BASE_URL}/api/v1/admin/registrations/${registrationId}/withdraw`,
             {
+				credentials: "include",
                 method: "PUT",
                 headers: {
                     Authorization: `Bearer ${getAdminToken()}`,
@@ -235,7 +241,41 @@ function Registrations() {
 
     return (
         <div className="flex min-h-screen flex-col bg-slate-100">
-            <PublicHeader />
+            <PublicHeader
+                tournamentName={tournamentName}
+                adminActions={(
+                    <>
+                        <button
+                            className={`rounded-lg px-4 py-2.5 text-left font-semibold transition ${registrationStatus === "REGISTRATION_OPEN" ? "border border-amber-400/40 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20" : "border border-emerald-400/40 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20"}`}
+                            onClick={() => void toggleRegistrationStatus()}
+                            type="button"
+                        >
+                            {registrationStatus === "REGISTRATION_OPEN" ? "Stop registrations" : "Open registrations"}
+                        </button>
+                        <button
+                            className="rounded-lg border border-white/20 bg-white/5 px-4 py-2.5 text-left font-semibold text-white transition hover:bg-white/10"
+                            onClick={() => navigate(`/admin/events/${eventId}/draw`)}
+                            type="button"
+                        >
+                            Draw
+                        </button>
+                        <button
+                            className="rounded-lg border border-white/20 bg-white/5 px-4 py-2.5 text-left font-semibold text-white transition hover:bg-white/10"
+                            onClick={() => void loadRegistrations()}
+                            type="button"
+                        >
+                            Refresh
+                        </button>
+                        <button
+                            className="rounded-lg border border-red-400/40 bg-red-500/10 px-4 py-2.5 text-left font-semibold text-red-200 transition hover:bg-red-500 hover:text-white"
+                            onClick={handleUnauthorized}
+                            type="button"
+                        >
+                            Sign out
+                        </button>
+                    </>
+                )}
+            />
             <main className="flex-1 px-4 py-8">
             <div className="mx-auto max-w-5xl">
                 <div className="mb-8 rounded-2xl bg-slate-900 p-6 text-white shadow-lg">
@@ -245,53 +285,10 @@ function Registrations() {
                                 Admin
                             </p>
                             <h1 className="mt-2 text-3xl font-bold">
-                                Men's Doubles Registrations
+                                Registrations
                             </h1>
                         </div>
 
-                        <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
-                            <div className="hidden text-right sm:block">
-                                <p className="text-sm font-semibold text-white">
-                                    {profile?.name ?? "Loading..."}
-                                </p>
-                                <p className="text-xs text-slate-300">
-                                    {profile?.role ?? ""}
-                                </p>
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                                <button
-                                    className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${registrationStatus === "REGISTRATION_OPEN" ? "border border-amber-400/40 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20" : "border border-emerald-400/40 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20"}`}
-                                    onClick={() => void toggleRegistrationStatus()}
-                                    type="button"
-                                >
-                                    {registrationStatus === "REGISTRATION_OPEN" ? "Stop registrations" : "Open registrations"}
-                                </button>
-                                <button
-                                    className="rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
-                                    onClick={() => navigate("/admin/draw")}
-                                    type="button"
-                                >
-                                    Draw
-                                </button>
-
-                                <button
-                                    className="rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
-                                    onClick={() => void loadRegistrations()}
-                                    type="button"
-                                >
-                                    Refresh
-                                </button>
-
-                                <button
-                                    className="rounded-lg border border-red-400/40 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-200 transition hover:bg-red-500 hover:text-white"
-                                    onClick={handleUnauthorized}
-                                    type="button"
-                                >
-                                    Sign out
-                                </button>
-                            </div>
-                        </div>
                     </div>
                 </div>
 

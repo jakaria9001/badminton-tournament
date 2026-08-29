@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"errors"
 	"github.com/joho/godotenv"
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/jakaria9001/badminton-tournament/backend/internal/database"
 	"github.com/jakaria9001/badminton-tournament/backend/internal/draw"
@@ -172,10 +174,17 @@ func main() {
 		port,
 	)
 
-	if err := http.ListenAndServe(
-		":"+port,
-		r,
-	); err != nil {
+	server := &http.Server{
+		Addr:              ":" + port,
+		Handler:           r,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       60 * time.Second,
+		MaxHeaderBytes:    1 << 20,
+	}
+
+	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Fatal(err)
 	}
 }

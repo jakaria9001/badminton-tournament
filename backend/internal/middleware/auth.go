@@ -21,6 +21,7 @@ const (
 )
 
 func RequireAuth(
+	db *pgxpool.Pool,
 	jwtSecret string,
 ) func(http.Handler) http.Handler {
 
@@ -32,39 +33,19 @@ func RequireAuth(
 				r *http.Request,
 			) {
 
-				authHeader :=
-					r.Header.Get("Authorization")
-
-				if authHeader == "" {
-					http.Error(
-						w,
-						"missing authorization header",
-						http.StatusUnauthorized,
-					)
-
+				tokenString := ""
+				if cookie, err := r.Cookie("shuttlehub_session"); err == nil {
+					tokenString = cookie.Value
+				} else if authHeader := r.Header.Get("Authorization"); authHeader != "" {
+					parts := strings.SplitN(authHeader, " ", 2)
+					if len(parts) == 2 && parts[0] == "Bearer" {
+						tokenString = parts[1]
+					}
+				}
+				if tokenString == "" {
+					http.Error(w, "missing authentication", http.StatusUnauthorized)
 					return
 				}
-
-				parts :=
-					strings.SplitN(
-						authHeader,
-						" ",
-						2,
-					)
-
-				if len(parts) != 2 ||
-					parts[0] != "Bearer" {
-
-					http.Error(
-						w,
-						"invalid authorization header",
-						http.StatusUnauthorized,
-					)
-
-					return
-				}
-
-				tokenString := parts[1]
 
 				token, err :=
 					jwt.Parse(
@@ -124,16 +105,6 @@ func RequireAuth(
 					return
 				}
 
-				if role != model.RoleAdmin && role != model.RoleSuperAdmin {
-					http.Error(
-						w,
-						"admin access required",
-						http.StatusForbidden,
-					)
-
-					return
-				}
-
 				userIDString, ok := claims["user_id"].(string)
 				if !ok {
 					http.Error(w, "invalid token user", http.StatusUnauthorized)
@@ -146,6 +117,16 @@ func RequireAuth(
 					return
 				}
 
+				var currentRole string
+				if err := db.QueryRow(r.Context(), `SELECT role FROM users WHERE id = $1`, userID).Scan(&currentRole); err != nil {
+					http.Error(w, "session is no longer valid", http.StatusUnauthorized)
+					return
+				}
+				if currentRole != role || (currentRole != model.RoleAdmin && currentRole != model.RoleSuperAdmin) {
+					http.Error(w, "admin access required", http.StatusForbidden)
+					return
+				}
+
 				ctx := context.WithValue(
 					r.Context(),
 					UserIDKey,
@@ -155,7 +136,7 @@ func RequireAuth(
 				ctx = context.WithValue(
 					ctx,
 					RoleKey,
-					role,
+					currentRole,
 				)
 
 				next.ServeHTTP(

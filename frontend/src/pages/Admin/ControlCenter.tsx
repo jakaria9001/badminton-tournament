@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getAdminProfile, getAdminToken, logout, type AdminProfile } from "../../api/authApi";
+import { getEvent } from "../../api/eventApi";
 import PublicFooter from "../../components/PublicFooter";
 import PublicHeader from "../../components/PublicHeader";
 
@@ -36,12 +37,14 @@ export default function ControlCenter() {
   const [matches, setMatches] = useState<Match[]>([]);
   const [teamCount, setTeamCount] = useState(0);
   const [profile, setProfile] = useState<AdminProfile | null>(null);
+	const [tournamentName, setTournamentName] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const eventId = profile?.role === "ADMIN" ? profile.eventId ?? "" : "";
 
   const request = useCallback(async (url: string) => {
     const response = await fetch(`${API_BASE_URL}${url}`, {
+		credentials: "include",
       headers: {
         Authorization: `Bearer ${getAdminToken()}`,
       },
@@ -111,6 +114,14 @@ export default function ControlCenter() {
     void loadSummary();
   }, [eventId, request]);
 
+  useEffect(() => {
+    if (!eventId) {
+      return;
+    }
+
+    void getEvent(eventId).then((event) => setTournamentName(event.name)).catch(() => undefined);
+  }, [eventId]);
+
   const isRoundComplete = (round: Round) => {
     const roundMatches = matches.filter((match) => match.roundId === round.id);
     return round.status === "COMPLETED"
@@ -163,20 +174,29 @@ export default function ControlCenter() {
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-100 text-slate-900">
-      <PublicHeader />
+    <PublicHeader
+      tournamentName={tournamentName}
+      adminActions={(
+        <>
+          {profile?.role === "SUPER_ADMIN" ? (
+            <button className="rounded-lg border border-white/20 bg-white/5 px-4 py-2.5 text-left font-semibold text-white transition hover:bg-white/10" onClick={() => navigate("/admin/superadmin")} type="button">Platform dashboard</button>
+          ) : (
+            <>
+              <button className="rounded-lg border border-white/20 bg-white/5 px-4 py-2.5 text-left font-semibold text-white transition hover:bg-white/10" onClick={() => navigate(`/admin/events/${eventId}/registrations`)} type="button">Registrations</button>
+              <button className="rounded-lg border border-white/20 bg-white/5 px-4 py-2.5 text-left font-semibold text-white transition hover:bg-white/10" onClick={() => navigate(`/admin/events/${eventId}/draw`)} type="button">Draw and results</button>
+            </>
+          )}
+          <button className="rounded-lg border border-red-400/40 bg-red-500/10 px-4 py-2.5 text-left font-semibold text-red-200 transition hover:bg-red-500 hover:text-white" onClick={() => { logout(); navigate("/admin/login", { replace: true }); }} type="button">Sign out</button>
+        </>
+      )}
+    />
       <main className="flex-1 px-4 py-8">
         <div className="mx-auto max-w-5xl">
           <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">ShuttleHub · {profile?.role === "SUPER_ADMIN" ? "SuperAdmin" : "Admin"}</p>
-              <h1 className="mt-2 text-3xl font-black text-slate-950">{profile?.role === "SUPER_ADMIN" ? "Platform Control" : "Admin Control Center"}</h1>
-              <p className="mt-2 text-sm text-slate-500">{profile?.role === "SUPER_ADMIN" ? "Manage tournaments and admin assignments." : "Men&apos;s Doubles 2026"}</p>
-            </div>
-            <div className="flex items-center gap-2">
-              {profile?.role === "SUPER_ADMIN" && (
-                <button className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-800 transition hover:bg-slate-100" onClick={() => navigate("/admin/superadmin")} type="button">SuperAdmin dashboard</button>
-              )}
-              <button className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-bold text-red-700 transition hover:bg-red-100" onClick={() => { logout(); navigate("/admin/login", { replace: true }); }} type="button">Sign out</button>
+              <h1 className="mt-2 text-3xl font-black text-slate-950">{profile?.name ?? "Admin Control Center"}</h1>
+              <p className="mt-2 text-sm text-slate-500">{profile?.role === "SUPER_ADMIN" ? "Manage tournaments and admin assignments." : tournamentName || "Tournament control center"}</p>
             </div>
           </div>
 
@@ -185,7 +205,7 @@ export default function ControlCenter() {
           <section className="mb-6 rounded-2xl bg-white p-6 shadow-sm">
             <div className="flex flex-wrap items-end justify-between gap-4">
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Men&apos;s Doubles</p>
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">Men's Doubles</p>
                 <h2 className="mt-2 text-2xl font-bold text-slate-950">Tournament overview</h2>
               </div>
               <span className="inline-flex items-center gap-2 rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-emerald-800"><span className="h-2 w-2 rounded-full bg-emerald-500" aria-hidden="true" />{tournamentComplete ? "Complete" : "Live"}</span>

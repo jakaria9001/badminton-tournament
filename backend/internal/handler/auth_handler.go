@@ -3,6 +3,8 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
+	"os"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -30,16 +32,7 @@ func (h *AuthHandler) Login(
 
 	var req model.LoginRequest
 
-	if err := json.NewDecoder(
-		r.Body,
-	).Decode(&req); err != nil {
-
-		http.Error(
-			w,
-			"invalid request body",
-			http.StatusBadRequest,
-		)
-
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -59,16 +52,16 @@ func (h *AuthHandler) Login(
 		return
 	}
 
-	response := model.LoginResponse{
-		Token: token,
-	}
-
-	w.Header().Set(
-		"Content-Type",
-		"application/json",
-	)
-
-	json.NewEncoder(w).Encode(response)
+	http.SetCookie(w, &http.Cookie{
+		Name:     "shuttlehub_session",
+		Value:    token,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   os.Getenv("APP_ENV") == "production",
+		SameSite: http.SameSiteLaxMode,
+		MaxAge:   int((24 * time.Hour).Seconds()),
+	})
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *AuthHandler) Me(
@@ -109,8 +102,7 @@ func (h *AuthHandler) CreateAdmin(
 	r *http.Request,
 ) {
 	var req model.CreateAdminRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 

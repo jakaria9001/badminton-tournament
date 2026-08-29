@@ -55,8 +55,7 @@ func (h *EventHandler) UpdateRegistrationStatus(
 	}
 
 	var request model.UpdateRegistrationStatusRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+	if !decodeJSON(w, r, &request) {
 		return
 	}
 
@@ -78,8 +77,7 @@ func (h *EventHandler) Create(
 	r *http.Request,
 ) {
 	var request model.EventAdminRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+	if !decodeJSON(w, r, &request) {
 		return
 	}
 	eventID, err := h.service.CreateEvent(r.Context(), request)
@@ -122,8 +120,7 @@ func (h *EventHandler) Update(
 		return
 	}
 	var request model.EventAdminRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+	if !decodeJSON(w, r, &request) {
 		return
 	}
 	if err := h.service.UpdateEvent(r.Context(), eventID, request); err != nil {
@@ -148,8 +145,7 @@ func (h *EventHandler) UpdateAdmin(
 	}
 
 	var request model.EventAdminAssignmentRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+	if !decodeJSON(w, r, &request) {
 		return
 	}
 	if err := h.service.UpdateEventAdmin(r.Context(), eventID, request.AssignedAdminID); err != nil {
@@ -184,10 +180,6 @@ func (h *EventHandler) GetByID(
 	eventID, err := uuid.Parse(eventIDString)
 
 	if err != nil {
-		if errors.Is(err, model.ErrEventNotFound) {
-			http.Error(w, err.Error(), http.StatusNotFound)
-			return
-		}
 		http.Error(
 			w,
 			"invalid event ID",
@@ -202,6 +194,10 @@ func (h *EventHandler) GetByID(
 	)
 
 	if err != nil {
+		if errors.Is(err, model.ErrEventNotFound) {
+			http.Error(w, "event not found", http.StatusNotFound)
+			return
+		}
 		http.Error(
 			w,
 			"failed to get event",

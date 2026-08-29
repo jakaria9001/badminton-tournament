@@ -71,6 +71,12 @@ func (s *ResultService) Submit(
 	if err := s.matchRepository.CompleteMatchTx(ctx, tx, matchID, winner, loser); err != nil {
 		return err
 	}
+	if err := s.matchRepository.CreateThreeTeamPlayoffTx(ctx, tx, target.RoundID, matchID, loser); err != nil {
+		return err
+	}
+	if err := s.matchRepository.CreateFinalFixtureIfReadyTx(ctx, tx, target.RoundID); err != nil {
+		return err
+	}
 
 	if err := s.matchRepository.CompleteRoundIfFinishedTx(ctx, tx, target.RoundID); err != nil {
 		return err

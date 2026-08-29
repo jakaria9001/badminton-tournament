@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { getEvent } from "../api/eventApi";
-import { getAdminProfile, getAdminToken, type AdminProfile } from "../api/authApi";
+import { getAdminProfile, type AdminProfile } from "../api/authApi";
 import type { EventInfo } from "../types/event";
 import PublicFooter from "../components/PublicFooter";
 import PublicHeader from "../components/PublicHeader";
@@ -31,10 +31,6 @@ export default function EventDetails() {
   }, [eventId]);
 
   useEffect(() => {
-    if (!getAdminToken()) {
-      return;
-    }
-
     void getAdminProfile().then(setProfile).catch(() => undefined);
   }, []);
 

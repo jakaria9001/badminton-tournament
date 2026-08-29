@@ -2,7 +2,7 @@
 import { useNavigate } from "react-router-dom";
 import { listAdminEvents } from "../api/eventApi";
 import type { EventInfo } from "../types/event";
-import { getAdminProfile, getAdminToken, logout } from "../api/authApi";
+import { getAdminProfile, getAdminToken, logout, type AdminProfile } from "../api/authApi";
 import PublicFooter from "../components/PublicFooter";
 import PublicHeader from "../components/PublicHeader";
 
@@ -20,6 +20,7 @@ export default function SuperAdminDashboard() {
   const navigate = useNavigate();
   const [events, setEvents] = useState<EventInfo[]>([]);
   const [admins, setAdmins] = useState<AdminUser[]>([]);
+	const [profile, setProfile] = useState<AdminProfile | null>(null);
   const [name, setName] = useState("");
   const [venueName, setVenueName] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -41,6 +42,7 @@ export default function SuperAdminDashboard() {
     const [eventData, adminResponse] = await Promise.all([
       listAdminEvents(),
       fetch(`${API_BASE_URL}/api/v1/admin/superadmin/admins`, {
+		credentials: "include",
         headers: { Authorization: `Bearer ${getAdminToken()}` },
       }),
     ]);
@@ -61,6 +63,7 @@ export default function SuperAdminDashboard() {
           navigate("/admin", { replace: true });
           return;
         }
+		setProfile(profile);
         await loadDashboard();
       } catch (loadError) {
         if (loadError instanceof Error && loadError.message !== "Session expired") {
@@ -82,6 +85,7 @@ export default function SuperAdminDashboard() {
     setSuccess("");
     try {
       const response = await fetch(`${API_BASE_URL}/api/v1/admin/superadmin/events`, {
+		credentials: "include",
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${getAdminToken()}` },
         body: JSON.stringify({
@@ -117,6 +121,7 @@ export default function SuperAdminDashboard() {
     setSuccess("");
     try {
       const response = await fetch(`${API_BASE_URL}/api/v1/admin/superadmin/admins`, {
+		credentials: "include",
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${getAdminToken()}` },
         body: JSON.stringify({
@@ -148,6 +153,7 @@ export default function SuperAdminDashboard() {
     setSuccess("");
     try {
       const response = await fetch(`${API_BASE_URL}/api/v1/admin/superadmin/events/${event.id}`, {
+		credentials: "include",
         method: "DELETE",
         headers: { Authorization: `Bearer ${getAdminToken()}` },
       });
@@ -165,6 +171,7 @@ export default function SuperAdminDashboard() {
     setSuccess("");
     try {
       const response = await fetch(`${API_BASE_URL}/api/v1/admin/superadmin/events/${eventId}/admin`, {
+		credentials: "include",
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${getAdminToken()}` },
         body: JSON.stringify({ assignedAdminId: assignedAdminId || null }),
@@ -196,16 +203,25 @@ export default function SuperAdminDashboard() {
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-100 text-slate-900">
-      <PublicHeader />
+    <PublicHeader
+      adminActions={(
+        <button
+          className="rounded-lg border border-red-400/40 bg-red-500/10 px-4 py-2.5 text-left font-semibold text-red-200 transition hover:bg-red-500 hover:text-white"
+          onClick={signOut}
+          type="button"
+        >
+          Sign out
+        </button>
+      )}
+    />
       <main className="flex-1 px-4 py-8">
         <div className="mx-auto max-w-6xl">
           <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
             <div>
               <p className="text-sm font-bold uppercase tracking-[0.18em] text-slate-500">ShuttleHub · SuperAdmin</p>
-              <h1 className="mt-2 text-3xl font-black text-slate-950">Platform Control</h1>
+              <h1 className="mt-2 text-3xl font-black text-slate-950">{profile?.name ?? "SuperAdmin"}</h1>
               <p className="mt-2 text-sm text-slate-500">Manage tournaments and admin roles across the platform.</p>
             </div>
-            <button className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-bold text-red-700" onClick={signOut} type="button">Sign out</button>
           </div>
 
           {error && <p className="mb-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900" role="alert">{error}</p>}
@@ -310,7 +326,13 @@ export default function SuperAdminDashboard() {
               {events.map((event) => (
                 <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between" key={event.id}>
                   <div>
-                    <p className="font-bold text-slate-950">{event.name}</p>
+                    <button
+                      className="font-bold text-slate-950 underline decoration-slate-300 underline-offset-4 transition hover:decoration-amber-500 hover:text-amber-700"
+                      onClick={() => navigate(`/admin/events/${event.id}/registrations`)}
+                      type="button"
+                    >
+                      {event.name}
+                    </button>
                     <p className="text-sm text-slate-600">{event.status} · {event.registeredTeams} teams registered</p>
                   </div>
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center">

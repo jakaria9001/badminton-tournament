@@ -51,16 +51,7 @@ func (h *RoundHandler) Create(
 
 	var req CreateRoundRequest
 
-	if err := json.NewDecoder(
-		r.Body,
-	).Decode(&req); err != nil {
-
-		http.Error(
-			w,
-			"invalid request body",
-			http.StatusBadRequest,
-		)
-
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 

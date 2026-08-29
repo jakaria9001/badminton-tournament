@@ -27,8 +27,7 @@ func (h *ResultHandler) Submit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var request model.SubmitMatchResultRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+	if !decodeJSON(w, r, &request) {
 		return
 	}
 

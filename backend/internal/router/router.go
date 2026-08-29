@@ -99,7 +99,7 @@ func NewRouter(
 	r.Route("/api/v1/admin", func(r chi.Router) {
 
 		r.Use(
-			middleware.RequireAuth(jwtSecret),
+			middleware.RequireAuth(db, jwtSecret),
 		)
 
 		r.Route("/superadmin", func(r chi.Router) {

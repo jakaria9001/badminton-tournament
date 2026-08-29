@@ -117,11 +117,22 @@ func (s *RoundService) Lock(
 	ctx context.Context,
 	roundID uuid.UUID,
 ) error {
+	round, err := s.repository.GetByID(ctx, roundID)
+	if err != nil {
+		return err
+	}
+	if !CanLockRound(round.RoundName) {
+		return fmt.Errorf("only the final round can be locked")
+	}
 
 	return s.repository.Lock(
 		ctx,
 		roundID,
 	)
+}
+
+func CanLockRound(roundName string) bool {
+	return roundName == model.Final
 }
 
 func (s *RoundService) GetAvailableTeams(
