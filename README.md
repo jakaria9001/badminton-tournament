@@ -1,139 +1,116 @@
 # ShuttleHub Badminton Tournament
 
-A full-stack badminton tournament registration portal for managing men's doubles events. Players can view event availability, submit a team registration, and browse confirmed teams. Administrators can securely review registrations, confirm or reject teams, and withdraw teams while preserving registration history.
+ShuttleHub is a full-stack badminton tournament platform for managing events, team registrations, draws, round progression, and live match results. The project combines a React and TypeScript frontend with a Go backend powered by PostgreSQL, supporting both public tournament participation and admin-side competition control.
 
-## Features
+## What the project does
 
-### Public portal
+### Public experience
 
-- Tournament landing page with live event status and capacity
-- Men's doubles team registration
-- Indian mobile number validation
-- Required Player 1 phone number
-- Optional Player 2 phone number
-- Optional team name with player-name fallback
-- Confirmed teams listing
-- ShuttleHub branding and linked homepage navigation
+- Browse tournament events and event details
+- View live event status, registration capacity, and venue information
+- Register a men’s doubles team with validation for Indian phone numbers
+- See confirmed teams on the public teams page
+- Open event-specific routes for registration, team listing, and match details
 
-### Admin dashboard
+### Admin experience
 
-- JWT-based administrator login
-- Protected registration dashboard
-- Registration summary by status
-- Confirm or reject pending registrations
-- Withdraw teams without permanently deleting registration history
-- Automatic redirect to login when authentication expires or is invalid
+- Sign in securely as an admin or super admin
+- Review and manage registrations from an admin dashboard
+- Confirm, reject, or withdraw registrations while preserving history
+- Create and manage tournament rounds and bracket draws
+- Enter match results and progress the bracket automatically
+- Handle three-team semifinal workflows and auto-create downstream fixtures
+- Manage platform-level events and admin assignments from the super-admin dashboard
 
-### Data integrity
+### Recent platform capabilities
 
-- Registration status and capacity rules enforced by the backend
-- Withdrawn and rejected teams do not consume capacity
-- Duplicate participant protection per event
-- Unique supplied phone numbers at the database level
-- Database transactions for registration creation
-- PostgreSQL foreign keys and cascade rules for tournament ownership
+- Responsive shared header navigation for desktop and mobile
+- Secure authentication with HTTP-only cookies and role-based access
+- CSRF origin validation for state-changing admin requests
+- Rate limiting for login and registration endpoints
+- Automatic bracket progression for byes and playoff scenarios
+- Transaction-safe draw generation and result submission
 
-## Technology Stack
+## Technology stack
 
 ### Frontend
 
 - React 19
 - TypeScript
 - Vite
-- React Router DOM
+- React Router
 - Tailwind CSS
 - Oxlint
 
 ### Backend
 
-- Go
+- Go 1.27
 - Chi router
 - PostgreSQL
 - pgx connection pool
 - JWT authentication
 - bcrypt password hashing
-- golang-migrate-compatible SQL migrations
+- SQL migrations via golang-migrate-compatible files
 
-## Project Structure
+## Project structure
 
 ```text
 badminton-tournament/
 ├── backend/
 │   ├── cmd/
-│   │   ├── create-admin/       # CLI for creating an administrator
-│   │   └── server/             # HTTP API server
+│   │   ├── create-admin/
+│   │   └── server/
 │   ├── internal/
-│   │   ├── database/           # PostgreSQL connection setup
-│   │   ├── handler/             # HTTP handlers
-│   │   ├── middleware/          # Authentication middleware
-│   │   ├── model/               # Request and response models
-│   │   ├── repository/          # Database queries
-│   │   ├── router/              # API route registration
-│   │   └── service/             # Business rules
-│   ├── migrations/              # SQL up/down migrations
-│   ├── go.mod
-│   └── .env                    # Local only, never commit
+│   │   ├── database/
+│   │   ├── handler/
+│   │   ├── middleware/
+│   │   ├── model/
+│   │   ├── repository/
+│   │   ├── router/
+│   │   └── service/
+│   ├── migrations/
+│   └── go.mod
 ├── frontend/
-│   ├── public/                  # Static assets and ShuttleHub logo
+│   ├── public/
 │   ├── src/
-│   │   ├── api/                 # Backend API clients
-│   │   ├── components/          # Shared React components
-│   │   ├── pages/               # Public and admin pages
-│   │   └── types/               # Frontend types
-│   ├── package.json
-│   └── .env                    # Local only, never commit
+│   │   ├── api/
+│   │   ├── components/
+│   │   ├── pages/
+│   │   └── types/
+│   └── package.json
 └── README.md
 ```
 
-## Application Routes
+## Main routes
 
-| Route | Description | Access |
-| --- | --- | --- |
-| `/` | Tournament homepage | Public |
-| `/register` | Register a men's doubles team | Public |
-| `/teams` | Browse confirmed teams | Public |
-| `/admin/login` | Administrator login | Public |
-| `/admin/registrations` | Manage registrations | Admin |
-
-## API Endpoints
-
-| Method | Endpoint | Description | Access |
-| --- | --- | --- | --- |
-| `GET` | `/health` | Health check | Public |
-| `GET` | `/api/v1/events/{eventID}/` | Get event details | Public |
-| `POST` | `/api/v1/events/{eventID}/registrations` | Register a team | Public |
-| `GET` | `/api/v1/events/{eventID}/teams` | List confirmed teams | Public |
-| `POST` | `/api/v1/auth/login` | Sign in as administrator | Public |
-| `GET` | `/api/v1/admin/me` | Get authenticated administrator | Admin |
-| `GET` | `/api/v1/admin/events/{eventID}/registrations` | List registrations | Admin |
-| `PUT` | `/api/v1/admin/registrations/{registrationID}/status` | Update status | Admin |
-| `PUT` | `/api/v1/admin/registrations/{registrationID}/withdraw` | Withdraw a registration | Admin |
-
-Admin endpoints require an authorization header:
-
-```http
-Authorization: Bearer <jwt-token>
-```
+- `/` — public home page
+- `/events/:eventId` — event details and status
+- `/events/:eventId/register` — team registration
+- `/events/:eventId/teams` — confirmed teams
+- `/events/:eventId/live-scores` — match and round results
+- `/admin/login` — admin login
+- `/admin` — admin control center
+- `/admin/registrations` — registration review
+- `/admin/draw` — round and draw management
+- `/admin/superadmin` — super-admin dashboard
 
 ## Prerequisites
 
-Install the following before running the project:
+Install the following before running the app locally:
 
-- Go 1.27 or compatible
+- Go 1.27 or newer
 - Node.js and npm
 - PostgreSQL
-- `migrate` CLI compatible with the migration files
 
-The backend expects a PostgreSQL database named `badminton_tournament` unless you choose another database in `DATABASE_URL`.
+## Backend environment
 
-## Database Setup
-
-Create the database in PostgreSQL, then configure the backend environment:
+Create a backend environment file with values such as:
 
 ```env
 DATABASE_URL=postgres://postgres:password@localhost:5432/badminton_tournament?sslmode=disable
 PORT=8080
 JWT_SECRET=replace-with-a-long-random-secret
+COOKIE_SECURE=false
 CORS_ALLOWED_ORIGINS=http://localhost:5173
 LOGIN_RATE_LIMIT_MAX_REQUESTS=5
 LOGIN_RATE_LIMIT_WINDOW_SECONDS=60
@@ -148,49 +125,13 @@ cd backend
 migrate -path migrations -database "$DATABASE_URL" up
 ```
 
-Check the migration version:
-
-```bash
-migrate -path migrations -database "$DATABASE_URL" version
-```
-
-Do not commit `.env` files or real secrets. Use a strong random `JWT_SECRET` outside local development.
-
-## Create an Administrator
-
-Set an administrator password in the backend environment:
-
-```env
-ADMIN_PASSWORD=choose-a-local-admin-password
-```
-
-Run the admin creation command from the backend directory:
+Create an initial admin account:
 
 ```bash
 go run ./cmd/create-admin
 ```
 
-The current development account email created by this command is:
-
-```text
-admin@badminton.local
-```
-
-## Rate Limiting
-
-Login and public registration requests are limited independently by client IP.
-By default, each IP can make 5 login requests and 10 registration requests per
-60-second window. Requests beyond the limit receive HTTP `429` and a
-`Retry-After` response header.
-
-These defaults are intended for a single backend instance. For multiple backend
-instances, use a shared store such as Redis so all instances enforce the same
-limits. The limiter uses the connection IP and does not trust client-supplied
-forwarding headers by default.
-
-Change this behavior before production if administrator email management is required.
-
-## Run Locally
+## Run locally
 
 ### Start the backend
 
@@ -199,7 +140,7 @@ cd backend
 go run ./cmd/server
 ```
 
-The API runs at:
+The API will run on:
 
 ```text
 http://localhost:8080
@@ -207,7 +148,7 @@ http://localhost:8080
 
 ### Start the frontend
 
-Create `frontend/.env`:
+Create a frontend environment file:
 
 ```env
 VITE_API_BASE_URL=http://localhost:8080
@@ -221,75 +162,53 @@ npm install
 npm run dev
 ```
 
-The frontend runs at:
+The frontend will run on:
 
 ```text
 http://localhost:5173
 ```
 
-If port `8080` is already in use, either stop the existing backend process or run the backend on another port:
+## Validation and business rules
 
-```powershell
-$env:PORT = "8081"
-go run ./cmd/server
-```
+- Player 1 name is required
+- Player 1 phone is required
+- Player 2 name is optional, but if provided it must follow the same validation rules
+- Indian mobile numbers must be 10 digits and start with 6, 7, 8, or 9
+- Duplicate phone numbers are blocked within an event
+- Registrations are rejected when the event is closed, past its deadline, or full
+- Registration state transitions are enforced server-side
+- Draw generation and match results are handled transactionally
 
-Update `VITE_API_BASE_URL` to match the new port.
-
-## Validation Rules
-
-- Player 1 name is required.
-- Player 1 phone is required.
-- Player 2 name is required.
-- Player 2 phone is optional.
-- When supplied, Indian mobile numbers must contain exactly 10 digits and start with `6`, `7`, `8`, or `9`.
-- Player 1 and Player 2 cannot use the same phone number.
-- A participant cannot register twice in the same event when their phone is available.
-- Registration is rejected when the event is closed, past its deadline, or full.
-
-The mobile-number format check confirms a basic Indian numbering pattern. It does not prove that a number is active or belongs to the participant. OTP verification would be needed for that.
-
-## Development Commands
+## Development commands
 
 ### Frontend
 
 ```bash
 cd frontend
-npm run dev       # Start Vite development server
-npm run lint      # Run Oxlint
-npm run build     # Type-check and create production build
-npm run preview   # Preview the production build
+npm run dev
+npm run lint
+npm run build
+npm run preview
 ```
 
 ### Backend
 
 ```bash
 cd backend
-go test ./...     # Run all Go tests
-go test -race ./... # Run tests with race detection
-go vet ./...      # Run Go static analysis
-gofmt -w .        # Format Go source files
+go test ./...
+go vet ./...
+gofmt -w .
 ```
 
 ## Testing
 
-The backend tests are under `backend/tests`. They cover registration validation and registration error-to-HTTP-status mapping.
+The backend test suite covers core behavior such as registration validation, state transitions, draw generation, and result handling.
 
-The test suite verifies, among other cases:
-
-- Optional Player 2 phone numbers
-- Invalid Indian phone formats
-- Duplicate phone numbers
-- Missing required fields
-- Event-not-found responses
-- Registration conflicts
-- Unexpected server errors
-
-Before opening a pull request, run:
+Before opening a pull request, it is recommended to run:
 
 ```bash
 cd backend
-go test -race ./...
+go test ./...
 go vet ./...
 
 cd ../frontend
@@ -297,31 +216,6 @@ npm run lint
 npm run build
 ```
 
-## Status Handling
+## Notes
 
-The main registration statuses are:
-
-- `PENDING`: submitted and awaiting admin review
-- `CONFIRMED`: visible on the public teams page
-- `REJECTED`: not visible publicly and does not consume capacity
-- `WITHDRAWN`: removed from the public teams page, does not consume capacity, and remains in the admin history
-
-Withdrawal is intentionally preferred over hard deletion for published tournaments because it preserves an audit trail.
-
-## Deployment Notes
-
-Before deploying:
-
-1. Use production PostgreSQL credentials and a strong JWT secret.
-2. Apply all migrations in order.
-3. Set `CORS_ALLOWED_ORIGINS` to the exact deployed frontend origin.
-4. Set the frontend `VITE_API_BASE_URL` to the deployed API origin.
-5. Serve the frontend `dist` directory through a static host or web server.
-6. Configure SPA fallback to `index.html` so direct navigation to `/teams` and admin routes works.
-7. Use HTTPS in production.
-8. Confirm database backups and migration rollback procedures.
-9. Do not expose administrator credentials in source control or deployment logs.
-
-## License
-
-This project is intended for internal tournament management and demonstration purposes.
+This project is intended for internal tournament management and demonstration purposes. It currently supports event-based tournament workflows with a public registration flow and a secure admin console for managing competition operations.
