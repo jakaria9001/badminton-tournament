@@ -103,3 +103,37 @@ func (h *AuthHandler) Me(
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(profile)
 }
+
+func (h *AuthHandler) CreateAdmin(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	var req model.CreateAdminRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.service.CreateAdmin(r.Context(), req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]string{"status": "created"})
+}
+
+func (h *AuthHandler) ListAdmins(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	admins, err := h.service.ListAdmins(r.Context())
+	if err != nil {
+		http.Error(w, "failed to list admins", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(admins)
+}

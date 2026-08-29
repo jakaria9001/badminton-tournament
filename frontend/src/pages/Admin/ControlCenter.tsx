@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getAdminToken, logout } from "../../api/authApi";
+import { getAdminProfile, getAdminToken, logout, type AdminProfile } from "../../api/authApi";
 import PublicFooter from "../../components/PublicFooter";
 import PublicHeader from "../../components/PublicHeader";
 
-const EVENT_ID = "00000000-0000-0000-0000-000000000002";
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 interface Round {
@@ -36,8 +35,10 @@ export default function ControlCenter() {
   const [rounds, setRounds] = useState<Round[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [teamCount, setTeamCount] = useState(0);
+  const [profile, setProfile] = useState<AdminProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const eventId = profile?.role === "ADMIN" ? profile.eventId ?? "" : "";
 
   const request = useCallback(async (url: string) => {
     const response = await fetch(`${API_BASE_URL}${url}`, {
@@ -60,12 +61,40 @@ export default function ControlCenter() {
   }, [navigate]);
 
   useEffect(() => {
+    async function loadProfile() {
+      try {
+        const currentProfile = await getAdminProfile();
+        setProfile(currentProfile);
+        if (currentProfile.role === "SUPER_ADMIN") {
+          setLoading(false);
+          return;
+        }
+        if (!currentProfile.eventId) {
+          throw new Error("This admin is not mapped to an event.");
+        }
+      } catch (profileError) {
+        if (profileError instanceof Error) {
+          setError(profileError.message);
+        }
+        setLoading(false);
+      }
+    }
+
+    void loadProfile();
+  }, []);
+
+  useEffect(() => {
+    if (!eventId) {
+      setLoading(false);
+      return;
+    }
+
     async function loadSummary() {
       try {
         const [roundData, matchData, teamData] = await Promise.all([
-          request(`/api/v1/admin/events/${EVENT_ID}/rounds`),
-          request(`/api/v1/events/${EVENT_ID}/matches`),
-          request(`/api/v1/events/${EVENT_ID}/teams`),
+          request(`/api/v1/admin/events/${eventId}/rounds`),
+          request(`/api/v1/events/${eventId}/matches`),
+          request(`/api/v1/events/${eventId}/teams`),
         ]);
         setRounds(roundData ?? []);
         setMatches(matchData ?? []);
@@ -80,7 +109,7 @@ export default function ControlCenter() {
     }
 
     void loadSummary();
-  }, [request]);
+  }, [eventId, request]);
 
   const isRoundComplete = (round: Round) => {
     const roundMatches = matches.filter((match) => match.roundId === round.id);
@@ -139,11 +168,16 @@ export default function ControlCenter() {
         <div className="mx-auto max-w-5xl">
           <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">ShuttleHub · Admin</p>
-              <h1 className="mt-2 text-3xl font-black text-slate-950">Admin Control Center</h1>
-              <p className="mt-2 text-sm text-slate-500">Men&apos;s Doubles 2026</p>
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">ShuttleHub · {profile?.role === "SUPER_ADMIN" ? "SuperAdmin" : "Admin"}</p>
+              <h1 className="mt-2 text-3xl font-black text-slate-950">{profile?.role === "SUPER_ADMIN" ? "Platform Control" : "Admin Control Center"}</h1>
+              <p className="mt-2 text-sm text-slate-500">{profile?.role === "SUPER_ADMIN" ? "Manage tournaments and admin assignments." : "Men&apos;s Doubles 2026"}</p>
             </div>
-            <button className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-bold text-red-700 transition hover:bg-red-100" onClick={() => { logout(); navigate("/admin/login", { replace: true }); }} type="button">Sign out</button>
+            <div className="flex items-center gap-2">
+              {profile?.role === "SUPER_ADMIN" && (
+                <button className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-800 transition hover:bg-slate-100" onClick={() => navigate("/admin/superadmin")} type="button">SuperAdmin dashboard</button>
+              )}
+              <button className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-bold text-red-700 transition hover:bg-red-100" onClick={() => { logout(); navigate("/admin/login", { replace: true }); }} type="button">Sign out</button>
+            </div>
           </div>
 
           {error && <p className="mb-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm font-medium text-amber-900" role="alert">{error}</p>}

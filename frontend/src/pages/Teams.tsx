@@ -1,17 +1,16 @@
 import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 
 import { getTeams } from "../api/teamApi";
 import type { Team } from "../api/teamApi";
 
-import { getEvent } from "../api/eventApi";
+import { getEvent, listEvents } from "../api/eventApi";
 import type { EventInfo } from "../types/event";
 import PublicFooter from "../components/PublicFooter";
 import PublicHeader from "../components/PublicHeader";
 
-const EVENT_ID =
-  "00000000-0000-0000-0000-000000000002";
-
 function Teams() {
+  const { eventId } = useParams();
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -20,9 +19,16 @@ function Teams() {
   useEffect(() => {
     async function loadTeams() {
       try {
+        const resolvedEventId = eventId ?? (await listEvents()).find((item) => item.status !== "DRAFT")?.id ?? "";
+        if (!resolvedEventId) {
+          setTeams([]);
+          setEvent(null);
+          return;
+        }
+
         const [teamsData, eventData] = await Promise.all([
-          getTeams(EVENT_ID),
-          getEvent(EVENT_ID),
+          getTeams(resolvedEventId),
+          getEvent(resolvedEventId),
         ]);
 
         setTeams(teamsData);
@@ -38,8 +44,8 @@ function Teams() {
       }
     }
 
-    loadTeams();
-  }, []);
+    void loadTeams();
+  }, [eventId]);
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-950 text-white">

@@ -1,16 +1,31 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 
 import {
   registerTeam,
 } from "../api/registrationApi";
+import { listEvents } from "../api/eventApi";
 import PublicFooter from "../components/PublicFooter";
 import PublicHeader from "../components/PublicHeader";
 
-const EVENT_ID =
-  "00000000-0000-0000-0000-000000000002";
-
 function Registration() {
+  const { eventId } = useParams();
+  const navigate = useNavigate();
+  const [selectedEventId, setSelectedEventId] = useState<string>(eventId ?? "");
+
+  useEffect(() => {
+    if (eventId) {
+      setSelectedEventId(eventId);
+      return;
+    }
+
+    void listEvents().then((events) => {
+      if (events.length > 0) {
+        setSelectedEventId(events[0].id);
+      }
+    });
+  }, [eventId]);
   const [player1Name, setPlayer1Name] = useState("");
   const [player1Phone, setPlayer1Phone] = useState("");
 
@@ -34,7 +49,7 @@ function Registration() {
     setLoading(true);
 
     try {
-      const result = await registerTeam(EVENT_ID, {
+      const result = await registerTeam(selectedEventId, {
         player1: {
           name: player1Name,
           phone: player1Phone,
@@ -98,19 +113,20 @@ function Registration() {
             Your registration is pending admin confirmation. Check the{" "}
             <a
               className="font-semibold text-amber-300 underline underline-offset-2 hover:text-amber-200"
-              href="/teams"
+              href={`/events/${selectedEventId}/teams`}
             >
               View Teams
             </a>{" "}
             page to confirm your registration status.
           </p>
 
-          <a
+          <button
             className="mt-6 block w-full rounded-lg bg-white px-4 py-3 text-center font-semibold text-slate-950 transition hover:bg-slate-200"
-            href="/"
+            onClick={() => navigate(`/events/${selectedEventId}`)}
+            type="button"
           >
             Return to homepage
-          </a>
+          </button>
           </div>
         </main>
       </div>

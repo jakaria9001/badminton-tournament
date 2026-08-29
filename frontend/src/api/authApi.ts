@@ -42,6 +42,7 @@ export interface AdminProfile {
   name: string;
   email: string;
   role: string;
+  eventId?: string;
 }
 
 export async function getAdminProfile(): Promise<AdminProfile> {

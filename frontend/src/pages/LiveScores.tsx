@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { getEvent } from "../api/eventApi";
+import { useParams } from "react-router-dom";
+import { getEvent, listEvents } from "../api/eventApi";
 import type { EventInfo } from "../types/event";
 import PublicFooter from "../components/PublicFooter";
 import PublicHeader from "../components/PublicHeader";
 
-const EVENT_ID = "00000000-0000-0000-0000-000000000002";
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 interface Team {
@@ -44,6 +44,7 @@ interface Round {
 
 export default function LiveScores() {
   const navigate = useNavigate();
+  const { eventId } = useParams();
   const [event, setEvent] = useState<EventInfo | null>(null);
   const [matches, setMatches] = useState<Match[]>([]);
   const [rounds, setRounds] = useState<Round[]>([]);
@@ -51,10 +52,18 @@ export default function LiveScores() {
   const [error, setError] = useState("");
 
   const loadScores = useCallback(async () => {
+    const resolvedEventId = eventId ?? (await listEvents()).find((item) => item.status !== "DRAFT")?.id ?? "";
+    if (!resolvedEventId) {
+      setEvent(null);
+      setMatches([]);
+      setRounds([]);
+      return;
+    }
+
     const [eventResponse, matchesResponse, roundsResponse] = await Promise.all([
-      getEvent(EVENT_ID),
-      fetch(`${API_BASE_URL}/api/v1/events/${EVENT_ID}/matches`),
-      fetch(`${API_BASE_URL}/api/v1/events/${EVENT_ID}/rounds`),
+      getEvent(resolvedEventId),
+      fetch(`${API_BASE_URL}/api/v1/events/${resolvedEventId}/matches`),
+      fetch(`${API_BASE_URL}/api/v1/events/${resolvedEventId}/rounds`),
     ]);
 
     if (!matchesResponse.ok || !roundsResponse.ok) {
@@ -64,7 +73,7 @@ export default function LiveScores() {
     setEvent(eventResponse);
     setMatches((await matchesResponse.json()) ?? []);
     setRounds((await roundsResponse.json()) ?? []);
-  }, []);
+  }, [eventId]);
 
   useEffect(() => {
     void loadScores().catch((loadError) => {

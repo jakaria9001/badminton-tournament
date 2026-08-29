@@ -151,6 +151,7 @@ func main() {
 
 	// Router
 	r := router.NewRouter(
+		db,
 		registrationHandler,
 		eventHandler,
 		authHandler,

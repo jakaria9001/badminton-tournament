@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getAdminToken, logout } from "../../api/authApi";
+import { getAdminProfile, getAdminToken, logout, type AdminProfile } from "../../api/authApi";
 import ResultDialog from "../../components/ResultDialog";
 import PublicFooter from "../../components/PublicFooter";
 import PublicHeader from "../../components/PublicHeader";
 
-const EVENT_ID = "00000000-0000-0000-0000-000000000002";
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 interface Round {
@@ -45,6 +44,8 @@ function Draw() {
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [activeMatch, setActiveMatch] = useState<Match | null>(null);
+  const [profile, setProfile] = useState<AdminProfile | null>(null);
+  const eventId = profile?.eventId ?? "";
 
   const finalMatch = Object.values(matches)
     .flat()
@@ -80,11 +81,15 @@ function Draw() {
   }, [navigate]);
 
   const loadRounds = useCallback(async () => {
-    const response = await request(`/api/v1/admin/events/${EVENT_ID}/rounds`);
+    if (!eventId) {
+      return;
+    }
+
+    const response = await request(`/api/v1/admin/events/${eventId}/rounds`);
     const data = await response.json();
     setRounds(data ?? []);
 
-    const matchesResponse = await request(`/api/v1/events/${EVENT_ID}/matches`);
+    const matchesResponse = await request(`/api/v1/events/${eventId}/matches`);
     const matchData: Match[] = (await matchesResponse.json()) ?? [];
     const matchesByRound = matchData.reduce<Record<string, Match[]>>((grouped, match) => {
       grouped[match.roundId] = [...(grouped[match.roundId] ?? []), match];
@@ -94,26 +99,55 @@ function Draw() {
 
     const available = await Promise.all((data ?? []).map(async (round: Round) => {
       const teamResponse = await request(
-        `/api/v1/admin/events/${EVENT_ID}/rounds/${round.id}/available-teams`,
+        `/api/v1/admin/events/${eventId}/rounds/${round.id}/available-teams`,
       );
       return [round.id, (await teamResponse.json()) ?? []] as const;
     }));
     setTeams(Object.fromEntries(available));
-  }, [request]);
+  }, [eventId, request]);
 
   useEffect(() => {
+    async function initProfile() {
+      try {
+        const currentProfile = await getAdminProfile();
+        if (currentProfile.role === "SUPER_ADMIN") {
+          navigate("/admin/superadmin", { replace: true });
+          return;
+        }
+        setProfile(currentProfile);
+      } catch {
+        logout();
+        navigate("/admin/login", { replace: true });
+        return;
+      }
+    }
+
+    void initProfile();
+  }, [navigate]);
+
+  useEffect(() => {
+    if (!eventId) {
+      setLoading(false);
+      return;
+    }
+
     void loadRounds().catch((error: unknown) => {
       if (error instanceof Error && error.message !== "Session expired") {
         setMessage(error.message);
       }
     }).finally(() => setLoading(false));
-  }, [loadRounds]);
+  }, [eventId, loadRounds]);
 
   async function createRound() {
     setBusy("create");
     setMessage("");
     try {
-      await request(`/api/v1/admin/events/${EVENT_ID}/rounds`, {
+      if (!eventId) {
+        setMessage("No event is assigned to this admin.");
+        return;
+      }
+
+      await request(`/api/v1/admin/events/${eventId}/rounds`, {
         method: "POST",
         body: JSON.stringify({
           roundNumber: rounds.length + 1,

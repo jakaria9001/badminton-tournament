@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { getEvent } from "../../api/eventApi";
 import {
     getAdminProfile,
     getAdminToken,
@@ -8,9 +9,6 @@ import {
 } from "../../api/authApi";
 import PublicFooter from "../../components/PublicFooter";
 import PublicHeader from "../../components/PublicHeader";
-
-const EVENT_ID =
-  "00000000-0000-0000-0000-000000000002";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL;
@@ -45,6 +43,10 @@ function Registrations() {
     const [profile, setProfile] =
         useState<AdminProfile | null>(null);
 
+    const [registrationStatus, setRegistrationStatus] =
+        useState("REGISTRATION_CLOSED");
+    const eventId = profile?.eventId ?? "";
+
     const sortedRegistrations = [...registrations].sort((a, b) => {
         const priority: Record<string, number> = {
             PENDING: 0,
@@ -63,9 +65,14 @@ function Registrations() {
     };
 
     const loadRegistrations = useCallback(async () => {
+        if (!eventId) {
+            setLoading(false);
+            return;
+        }
+
         try {
             const response = await fetch(
-                `${API_BASE_URL}/api/v1/admin/events/${EVENT_ID}/registrations`,
+                `${API_BASE_URL}/api/v1/admin/events/${eventId}/registrations`,
                 {
                     headers: {
                     Authorization: `Bearer ${getAdminToken()}`,
@@ -96,6 +103,10 @@ function Registrations() {
         async function loadProfile() {
             try {
             const adminProfile = await getAdminProfile();
+            if (adminProfile.role === "SUPER_ADMIN") {
+                navigate("/admin/superadmin", { replace: true });
+                return;
+            }
             setProfile(adminProfile);
             } catch {
             handleUnauthorized();
@@ -103,11 +114,52 @@ function Registrations() {
         }
 
         void loadProfile();
-    }, [handleUnauthorized]);
+    }, [handleUnauthorized, navigate]);
 
     useEffect(() => {
         void loadRegistrations();
-    }, [loadRegistrations]);
+    }, [eventId, loadRegistrations]);
+
+    useEffect(() => {
+        if (!eventId) {
+            return;
+        }
+
+        void getEvent(eventId).then((event) => {
+            setRegistrationStatus(event.status);
+        }).catch(() => undefined);
+    }, [eventId]);
+
+    async function toggleRegistrationStatus() {
+        const nextStatus = registrationStatus === "REGISTRATION_OPEN"
+            ? "REGISTRATION_CLOSED"
+            : "REGISTRATION_OPEN";
+        if (!eventId) {
+            return;
+        }
+
+        const response = await fetch(
+            `${API_BASE_URL}/api/v1/admin/events/${eventId}/registration-status`,
+            {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${getAdminToken()}`,
+                },
+                body: JSON.stringify({ status: nextStatus }),
+            },
+        );
+
+        if (response.status === 401 || response.status === 403) {
+            handleUnauthorized();
+            return;
+        }
+        if (!response.ok) {
+            alert(await response.text());
+            return;
+        }
+        setRegistrationStatus(nextStatus);
+    }
 
     async function updateStatus(
         registrationId: string,
@@ -211,6 +263,13 @@ function Registrations() {
                             </div>
 
                             <div className="flex items-center gap-2">
+                                <button
+                                    className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${registrationStatus === "REGISTRATION_OPEN" ? "border border-amber-400/40 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20" : "border border-emerald-400/40 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20"}`}
+                                    onClick={() => void toggleRegistrationStatus()}
+                                    type="button"
+                                >
+                                    {registrationStatus === "REGISTRATION_OPEN" ? "Stop registrations" : "Open registrations"}
+                                </button>
                                 <button
                                     className="rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
                                     onClick={() => navigate("/admin/draw")}

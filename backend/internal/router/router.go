@@ -9,12 +9,14 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/jakaria9001/badminton-tournament/backend/internal/handler"
 	"github.com/jakaria9001/badminton-tournament/backend/internal/middleware"
 )
 
 func NewRouter(
+	db *pgxpool.Pool,
 	registrationHandler *handler.RegistrationHandler,
 	eventHandler *handler.EventHandler,
 	authHandler *handler.AuthHandler,
@@ -56,21 +58,9 @@ func NewRouter(
 		MaxAge:           300,
 	}))
 
-	r.Get("/health", func(
-		w http.ResponseWriter,
-		r *http.Request,
-	) {
-		w.Header().Set(
-			"Content-Type",
-			"application/json",
-		)
-
-		w.WriteHeader(http.StatusOK)
-
-		w.Write([]byte(`{"status":"ok"}`))
-	})
-
 	r.Route("/api/v1", func(r chi.Router) {
+
+		r.Get("/events", eventHandler.List)
 
 		r.Route("/events/{eventID}", func(r chi.Router) {
 
@@ -112,54 +102,49 @@ func NewRouter(
 			middleware.RequireAuth(jwtSecret),
 		)
 
-		r.Post(
-			"/events/{eventID}/rounds",
-			roundHandler.Create,
-		)
+		r.Route("/superadmin", func(r chi.Router) {
+			r.Use(middleware.RequireRole("SUPER_ADMIN"))
+			r.Get("/events", eventHandler.ListAdmin)
+			r.Post("/events", eventHandler.Create)
+			r.Put("/events/{eventID}", eventHandler.Update)
+			r.Delete("/events/{eventID}", eventHandler.Delete)
+			r.Get("/admins", authHandler.ListAdmins)
+			r.Post("/admins", authHandler.CreateAdmin)
+		})
 
-		r.Get(
-			"/events/{eventID}/rounds",
-			roundHandler.GetByEvent,
-		)
+		r.Route("/events/{eventID}", func(r chi.Router) {
+			r.Use(middleware.RequireEventAccess(db))
+			r.Post("/rounds", roundHandler.Create)
+			r.Put("/registration-status", eventHandler.UpdateRegistrationStatus)
+			r.Get("/rounds", roundHandler.GetByEvent)
+			r.Get("/rounds/{roundID}/available-teams", roundHandler.GetAvailableTeams)
+			r.Get("/registrations", registrationHandler.GetRegistrations)
+		})
 
-		r.Get(
-			"/events/{eventID}/rounds/{roundID}/available-teams",
-			roundHandler.GetAvailableTeams,
-		)
+		r.Route("/registrations/{registrationID}", func(r chi.Router) {
+			r.Use(middleware.RequireRegistrationAccess(db))
+			r.Put("/status", registrationHandler.UpdateStatus)
+			r.Put("/withdraw", registrationHandler.WithdrawRegistration)
+		})
 
-		r.Post(
+		r.With(middleware.RequireRoundAccess(db)).Post(
 			"/rounds/{roundID}/matches",
 			matchHandler.Create,
 		)
 
-		r.Post(
+		r.With(middleware.RequireRoundAccess(db)).Post(
 			"/rounds/{roundID}/generate",
 			roundHandler.Generate,
 		)
 
-		r.Post(
+		r.With(middleware.RequireRoundAccess(db)).Post(
 			"/rounds/{roundID}/lock",
 			roundHandler.Lock,
 		)
 
-		r.Post(
+		r.With(middleware.RequireMatchAccess(db)).Post(
 			"/matches/{matchID}/result",
 			resultHandler.Submit,
-		)
-
-		r.Get(
-			"/events/{eventID}/registrations",
-			registrationHandler.GetRegistrations,
-		)
-
-		r.Put(
-			"/registrations/{registrationID}/status",
-			registrationHandler.UpdateStatus,
-		)
-
-		r.Put(
-			"/registrations/{registrationID}/withdraw",
-			registrationHandler.WithdrawRegistration,
 		)
 
 		r.Get("/me", authHandler.Me)

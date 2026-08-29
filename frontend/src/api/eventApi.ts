@@ -1,4 +1,5 @@
 import type { EventInfo } from "../types/event";
+import { getAdminToken } from "./authApi";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL;
@@ -13,6 +14,28 @@ export async function getEvent(
 
   if (!response.ok) {
     throw new Error("Failed to load event");
+  }
+
+  return response.json();
+}
+
+export async function listEvents(): Promise<EventInfo[]> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/events`);
+
+  if (!response.ok) {
+    throw new Error("Failed to load events");
+  }
+
+  return response.json();
+}
+
+export async function listAdminEvents(): Promise<EventInfo[]> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/admin/superadmin/events`, {
+    headers: { Authorization: `Bearer ${getAdminToken()}` },
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to load events");
   }
 
   return response.json();
