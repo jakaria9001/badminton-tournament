@@ -1,1 +1,84 @@
 @import "tailwindcss";
+
+:root {
+	color-scheme: light;
+	--court-ink: #071d26;
+	--court-deep: #0b2d35;
+	--court-green: #0f5b57;
+	--court-mist: #edf4f2;
+	--signal-gold: #e3a328;
+}
+
+body {
+	min-width: 320px;
+	background: var(--court-ink);
+}
+
+header.border-b {
+	background-color: var(--court-ink) !important;
+	background-image: linear-gradient(90deg, #071d26, #0b2d35 52%, #123c3a) !important;
+}
+
+footer.border-t {
+	background-color: var(--court-deep);
+	background-image: linear-gradient(105deg, #071d26, #0b2d35 58%, #15423d);
+}
+
+/* A shared broadcast-style field gives public views a clear sports identity. */
+.min-h-screen.bg-slate-950,
+.flex.min-h-screen.bg-slate-950 {
+	background-color: var(--court-ink) !important;
+	background-image:
+		linear-gradient(135deg, rgba(15, 91, 87, 0.58), transparent 48%),
+		linear-gradient(320deg, rgba(227, 163, 40, 0.12), transparent 38%) !important;
+	background-attachment: fixed;
+}
+
+.min-h-screen.bg-slate-100,
+.flex.min-h-screen.bg-slate-100 {
+	background-color: var(--court-mist) !important;
+	background-image:
+		linear-gradient(145deg, rgba(255, 255, 255, 0.58), rgba(223, 239, 231, 0.72) 54%, rgba(182, 215, 201, 0.8)),
+		linear-gradient(30deg, rgba(15, 91, 87, 0.36), transparent 52%) !important;
+	background-attachment: fixed;
+}
+
+.flex.min-h-screen.bg-slate-100 > main.bg-slate-100,
+.flex.min-h-screen.bg-slate-100 > main {
+	background-color: transparent !important;
+	background-image:
+		linear-gradient(145deg, rgba(255, 255, 255, 0.14), rgba(237, 244, 242, 0.04) 55%, rgba(217, 232, 226, 0.22)),
+		linear-gradient(30deg, rgba(15, 91, 87, 0.18), transparent 52%) !important;
+	background-attachment: fixed;
+}
+
+.min-h-screen.bg-slate-950 > main,
+.flex.min-h-screen.bg-slate-950 > main {
+	background-image:
+		linear-gradient(135deg, rgba(15, 91, 87, 0.28), transparent 48%),
+		linear-gradient(320deg, rgba(227, 163, 40, 0.08), transparent 40%) !important;
+	background-attachment: fixed;
+}
+
+.bg-slate-950.p-6.text-white.shadow-xl,
+.bg-slate-950.p-7.text-white.shadow-xl,
+.bg-slate-950.p-8.text-white.shadow-xl,
+.bg-slate-950.p-10.text-white.shadow-xl,
+.bg-gradient-to-br.from-slate-900.via-slate-900.to-slate-950,
+.bg-slate-900.p-6.text-white.shadow-lg,
+.bg-slate-900.p-8.shadow-2xl {
+	background-color: var(--court-deep) !important;
+	background-image: linear-gradient(135deg, #0f5b57, #0b2d35 62%, #071d26) !important;
+}
+
+.flex.min-h-screen.bg-slate-100 .rounded-2xl.bg-white,
+.flex.min-h-screen.bg-slate-100 .rounded-xl.bg-white,
+.flex.min-h-screen.bg-slate-100 .rounded-3xl.bg-white {
+	background-color: #fdfefd;
+	background-image: linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(239, 247, 243, 0.9));
+	border-color: rgba(15, 91, 87, 0.14);
+}
+
+.bg-amber-400 {
+	background-color: var(--signal-gold);
+}

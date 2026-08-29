@@ -52,7 +52,7 @@ function Teams() {
       <PublicHeader />
       <main className="flex-1 px-4 py-8">
       <div className="mx-auto max-w-4xl">
-        <div className="mb-8 rounded-[28px] border border-slate-800 bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 p-8 shadow-2xl shadow-slate-950/40">
+        <div className="mb-8 rounded-[28px] border border-slate-800 bg-slate-950 p-8 shadow-2xl shadow-slate-950/40">
           <div className="flex flex-col items-center text-center">
             <h1 className="mt-4 text-3xl font-black tracking-tight sm:text-4xl">
               Confirmed Teams
