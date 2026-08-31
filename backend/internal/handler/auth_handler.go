@@ -53,13 +53,18 @@ func (h *AuthHandler) Login(
 	}
 
 	secure := secureSessionCookie()
+	sameSite := http.SameSiteLaxMode
+	if secure {
+		sameSite = http.SameSiteNoneMode
+	}
+
 	cookie := &http.Cookie{
 		Name:     "shuttlehub_session",
 		Value:    token,
 		Path:     "/",
 		HttpOnly: true,
 		Secure:   secure,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: sameSite,
 		MaxAge:   int((24 * time.Hour).Seconds()),
 	}
 	if secure {
@@ -71,18 +76,26 @@ func (h *AuthHandler) Login(
 	w.Header().Set("Pragma", "no-cache")
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
 	w.Header().Set("Access-Control-Expose-Headers", "Set-Cookie")
+	w.Header().Set("Access-Control-Allow-Origin", "https://badminton-tournament-lime.vercel.app")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	secure := secureSessionCookie()
+	sameSite := http.SameSiteLaxMode
+	if secure {
+		sameSite = http.SameSiteNoneMode
+	}
+
 	cookie := &http.Cookie{
 		Name:     "shuttlehub_session",
 		Value:    "",
 		Path:     "/",
 		HttpOnly: true,
 		Secure:   secure,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: sameSite,
 		MaxAge:   -1,
 		Expires:  time.Unix(0, 0),
 	}
