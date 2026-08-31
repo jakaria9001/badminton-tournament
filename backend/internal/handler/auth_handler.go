@@ -52,35 +52,60 @@ func (h *AuthHandler) Login(
 		return
 	}
 
+	secure := secureSessionCookie()
 	sameSite := http.SameSiteLaxMode
-	if secureSessionCookie() {
+	if secure {
 		sameSite = http.SameSiteNoneMode
 	}
 
-	http.SetCookie(w, &http.Cookie{
-		Name: "shuttlehub_session", Value: token, Path: "/", HttpOnly: true,
-		Secure: secureSessionCookie(), SameSite: sameSite,
-		MaxAge: int((24 * time.Hour).Seconds()),
-	})
+	cookie := &http.Cookie{
+		Name:     "shuttlehub_session",
+		Value:    token,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   secure,
+		SameSite: sameSite,
+		MaxAge:   int((24 * time.Hour).Seconds()),
+	}
+	if secure {
+		cookie.Domain = getCookieDomain()
+	}
+
+	http.SetCookie(w, cookie)
 	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
+	secure := secureSessionCookie()
 	sameSite := http.SameSiteLaxMode
-	if secureSessionCookie() {
+	if secure {
 		sameSite = http.SameSiteNoneMode
 	}
 
-	http.SetCookie(w, &http.Cookie{
-		Name: "shuttlehub_session", Value: "", Path: "/", HttpOnly: true,
-		Secure: secureSessionCookie(), SameSite: sameSite,
-		MaxAge: -1, Expires: time.Unix(0, 0),
-	})
+	cookie := &http.Cookie{
+		Name:     "shuttlehub_session",
+		Value:    "",
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   secure,
+		SameSite: sameSite,
+		MaxAge:   -1,
+		Expires:  time.Unix(0, 0),
+	}
+	if secure {
+		cookie.Domain = getCookieDomain()
+	}
+
+	http.SetCookie(w, cookie)
 	w.WriteHeader(http.StatusNoContent)
 }
 
 func secureSessionCookie() bool {
 	return os.Getenv("COOKIE_SECURE") == "true"
+}
+
+func getCookieDomain() string {
+	return os.Getenv("COOKIE_DOMAIN")
 }
 
 func (h *AuthHandler) Me(
