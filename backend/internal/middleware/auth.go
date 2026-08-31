@@ -43,7 +43,7 @@ func RequireAuth(
 					}
 				}
 				if tokenString == "" {
-					http.Error(w, "missing authentication", http.StatusUnauthorized)
+					http.Error(w, "missing authentication cookie or bearer token", http.StatusUnauthorized)
 					return
 				}
 
@@ -119,7 +119,7 @@ func RequireAuth(
 
 				var currentRole string
 				if err := db.QueryRow(r.Context(), `SELECT role FROM users WHERE id = $1`, userID).Scan(&currentRole); err != nil {
-					http.Error(w, "session is no longer valid", http.StatusUnauthorized)
+					http.Error(w, "session is no longer valid: user not found", http.StatusUnauthorized)
 					return
 				}
 				if currentRole != role || (currentRole != model.RoleAdmin && currentRole != model.RoleSuperAdmin) {
