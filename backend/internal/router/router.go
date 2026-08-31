@@ -25,10 +25,7 @@ func NewRouter(
 	resultHandler *handler.ResultHandler,
 	jwtSecret string,
 ) http.Handler {
-	allowedOrigins := strings.Split(os.Getenv("CORS_ALLOWED_ORIGINS"), ",")
-	if allowedOrigins[0] == "" {
-		allowedOrigins = []string{"http://localhost:5173"}
-	}
+	allowedOrigins := getAllowedOrigins()
 	trustedOrigins := make(map[string]struct{}, len(allowedOrigins))
 	for _, origin := range allowedOrigins {
 		trustedOrigins[origin] = struct{}{}
@@ -160,6 +157,28 @@ func NewRouter(
 	})
 
 	return r
+}
+
+func getAllowedOrigins() []string {
+	configured := strings.TrimSpace(os.Getenv("CORS_ALLOWED_ORIGINS"))
+	if configured == "" {
+		return []string{"http://localhost:5173"}
+	}
+
+	parts := strings.Split(configured, ",")
+	origins := make([]string, 0, len(parts))
+	for _, origin := range parts {
+		origin = strings.TrimSpace(origin)
+		if origin != "" {
+			origins = append(origins, origin)
+		}
+	}
+
+	if len(origins) == 0 {
+		return []string{"http://localhost:5173"}
+	}
+
+	return origins
 }
 
 func envInt(name string, fallback int) int {

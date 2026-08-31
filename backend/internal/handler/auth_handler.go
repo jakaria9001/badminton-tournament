@@ -52,18 +52,28 @@ func (h *AuthHandler) Login(
 		return
 	}
 
+	sameSite := http.SameSiteLaxMode
+	if secureSessionCookie() {
+		sameSite = http.SameSiteNoneMode
+	}
+
 	http.SetCookie(w, &http.Cookie{
 		Name: "shuttlehub_session", Value: token, Path: "/", HttpOnly: true,
-		Secure: secureSessionCookie(), SameSite: http.SameSiteLaxMode,
+		Secure: secureSessionCookie(), SameSite: sameSite,
 		MaxAge: int((24 * time.Hour).Seconds()),
 	})
 	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
+	sameSite := http.SameSiteLaxMode
+	if secureSessionCookie() {
+		sameSite = http.SameSiteNoneMode
+	}
+
 	http.SetCookie(w, &http.Cookie{
 		Name: "shuttlehub_session", Value: "", Path: "/", HttpOnly: true,
-		Secure: secureSessionCookie(), SameSite: http.SameSiteLaxMode,
+		Secure: secureSessionCookie(), SameSite: sameSite,
 		MaxAge: -1, Expires: time.Unix(0, 0),
 	})
 	w.WriteHeader(http.StatusNoContent)
